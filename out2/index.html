@@ -164,8 +164,9 @@
       <div class="panel-header">
         <h3>Analytics</h3>
         <div class="panel-actions">
-          <button class="icon-btn" onclick="exportPayments()">⇣ Export Payments</button>
-          <button class="icon-btn" onclick="exportContribs()">⇣ Export Team</button>
+          <button class="icon-btn" onclick="openReport()">📄 View Report</button>
+          <button class="icon-btn" onclick="exportPayments()">⇣ CSV</button>
+          <button class="icon-btn" onclick="exportContribs()">⇣ Team CSV</button>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px">
@@ -437,6 +438,121 @@ function exportPayments(){
   toast('Payment history exported');
 }
 
+function openReport(){
+  const team=getActiveTeam();
+  const p=team.payments;
+  const allTotal=p.reduce((s,x)=>s+Number(x.amount||0),0);
+  const now=new Date();
+  const monthStart=new Date(now.getFullYear(),now.getMonth(),1).getTime();
+  const monthTotal=p.filter(x=>x.ts>=monthStart).reduce((s,x)=>s+Number(x.amount||0),0);
+  const byName={};
+  p.forEach(x=>{byName[x.name]=(byName[x.name]||0)+Number(x.amount||0);});
+  const topList=Object.entries(byName).sort((a,b)=>b[1]-a[1]);
+  const monthName=now.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  const reportDate=now.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Payroll Report — ${team.name}</title><style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,Arial,sans-serif;background:#fff;color:#111;padding:48px;max-width:860px;margin:0 auto;font-size:14px;line-height:1.6}
+    .hdr{border-bottom:3px solid #111;padding-bottom:24px;margin-bottom:32px}
+    .hdr h1{font-size:32px;font-weight:800;margin-bottom:8px}
+    .hdr .sub{color:#666;font-size:14px}
+    .hdr .brand{float:right;text-align:right;font-size:12px;color:#999}
+    .section{margin-bottom:40px}
+    h2{font-size:18px;font-weight:700;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #ddd}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:24px}
+    .stat{padding:16px;background:#f8f8f8;border-radius:8px}
+    .stat-label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+    .stat-val{font-size:22px;font-weight:700;color:#111}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th{text-align:left;padding:10px 8px;background:#f0f0f0;font-size:11px;text-transform:uppercase;color:#666;letter-spacing:.05em;border-bottom:2px solid #ccc}
+    td{padding:12px 8px;border-bottom:1px solid #eee;font-size:13px;vertical-align:top}
+    td.amount{font-weight:600;color:#059669;white-space:nowrap}
+    td.mono{font-family:monospace;font-size:11px;color:#666}
+    .sig-link{color:#059669;text-decoration:none;font-family:monospace;font-size:10px}
+    .footer{margin-top:48px;padding-top:24px;border-top:1px solid #ddd;text-align:center;color:#999;font-size:11px}
+    @media print{body{padding:24px}.noprint{display:none}}
+    .toolbar{position:sticky;top:0;background:#fff;padding:16px 0;margin:-16px 0 24px;border-bottom:1px solid #eee;z-index:10}
+    .btn{background:#111;color:#fff;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;margin-right:8px}
+    .btn:hover{background:#333}
+    .btn-sec{background:#fff;color:#111;border:1px solid #ccc}
+  </style></head><body>
+    <div class="toolbar noprint">
+      <button class="btn" onclick="window.print()">🖨 Print / Save as PDF</button>
+      <button class="btn btn-sec" onclick="window.close()">Close</button>
+    </div>
+    <div class="hdr">
+      <div class="brand">Paycheck by White Claw<br>paycheck.vercel.app</div>
+      <h1>Payroll Report</h1>
+      <div class="sub"><strong>${team.name}</strong> — Generated ${reportDate}</div>
+    </div>
+
+    <div class="section">
+      <h2>Summary</h2>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Paid This Month</div><div class="stat-val">${monthTotal.toFixed(2)}</div><div style="font-size:11px;color:#999">${monthName}</div></div>
+        <div class="stat"><div class="stat-label">Paid All Time</div><div class="stat-val">${allTotal.toFixed(2)}</div><div style="font-size:11px;color:#999">USDC total</div></div>
+        <div class="stat"><div class="stat-label">Total Payments</div><div class="stat-val">${p.length}</div><div style="font-size:11px;color:#999">transactions</div></div>
+        <div class="stat"><div class="stat-label">Team Size</div><div class="stat-val">${team.contribs.length}</div><div style="font-size:11px;color:#999">contributors</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Payment History</h2>
+      ${p.length?`<table>
+        <thead><tr><th>Date</th><th>Recipient</th><th>Note</th><th style="text-align:right">Amount</th><th>On-chain</th></tr></thead>
+        <tbody>
+          ${p.map(x=>`<tr>
+            <td>${new Date(x.ts).toLocaleString(undefined,{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td>
+            <td><strong>${x.name}</strong></td>
+            <td style="color:#666">${x.note||'—'}</td>
+            <td class="amount" style="text-align:right">${Number(x.amount).toFixed(2)} USDC</td>
+            <td><a href="https://solscan.io/tx/${x.sig}" target="_blank" class="sig-link">${x.sig.slice(0,12)}...</a></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`:'<p style="color:#999">No payments recorded.</p>'}
+    </div>
+
+    <div class="section">
+      <h2>Totals by Recipient</h2>
+      ${topList.length?`<table>
+        <thead><tr><th>Recipient</th><th style="text-align:right">Total Received</th><th style="text-align:right">Payments</th></tr></thead>
+        <tbody>
+          ${topList.map(([name,total])=>{
+            const count=p.filter(x=>x.name===name).length;
+            return `<tr><td><strong>${name}</strong></td><td class="amount" style="text-align:right">${total.toFixed(2)} USDC</td><td style="text-align:right;color:#666">${count}</td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>`:'<p style="color:#999">No data.</p>'}
+    </div>
+
+    <div class="section">
+      <h2>Team Roster</h2>
+      ${team.contribs.length?`<table>
+        <thead><tr><th>Name</th><th>Role</th><th>Wallet</th><th style="text-align:right">Rate</th></tr></thead>
+        <tbody>
+          ${team.contribs.map(c=>`<tr>
+            <td><strong>${c.n}</strong></td>
+            <td style="color:#666">${c.role||'—'}</td>
+            <td class="mono">${c.w}</td>
+            <td style="text-align:right">${c.r?Number(c.r).toFixed(2)+' USDC/'+(c.p==='day'?'day':c.p==='week'?'wk':c.p==='biweek'?'2wk':'mo'):'—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`:'<p style="color:#999">No contributors.</p>'}
+    </div>
+
+    <div class="footer">
+      Paycheck by White Claw — Stablecoin payroll with yield-powered advances on Solana<br>
+      Every payment verifiable on <a href="https://solscan.io/" style="color:#059669">Solscan</a> — Report generated from on-chain data<br>
+      <strong>$WCLAW</strong> • @whiteclawonsol
+    </div>
+  </body></html>`;
+
+  const w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();toast('Report opened in new tab');}
+  else{toast('Pop-ups blocked — allow pop-ups for this site',1);}
+}
+
 function exportContribs(){
   const team=getActiveTeam();
   if(!team.contribs.length){toast('No contributors to export',1);return}
@@ -502,25 +618,45 @@ async function runBatchPay(){
   btn.disabled=true;
   const progress=document.getElementById('batchProgress');
   progress.style.display='block';
+  progress.innerHTML='<strong>Starting payroll run...</strong>';
 
-  let successCount=0;
+  let successCount=0,failCount=0;
   for(let idx=0;idx<toPay.length;idx++){
     const {c,amount}=toPay[idx];
-    btn.textContent=`Paying ${idx+1}/${toPay.length}...`;
-    progress.textContent=`⏳ Paying ${c.n} (${amount} USDC) — ${idx+1} of ${toPay.length}`;
+    btn.textContent=`Processing ${idx+1}/${toPay.length}...`;
+    progress.innerHTML+=`<br><br>⏳ <strong>${c.n}</strong> — ${amount} USDC (approve in Phantom...)`;
     try{
       const sig=await sendOneUSDC(c.w,c.n,amount,'Payroll run '+new Date().toLocaleDateString());
       if(sig){
         successCount++;
-        progress.innerHTML+=`<br>✓ ${c.n}: <a href="https://solscan.io/tx/${sig}" target="_blank" style="color:#34d399;text-decoration:none;font-family:monospace;font-size:11px">${sig.slice(0,8)}...</a>`;
+        progress.innerHTML+=`<br>&nbsp;&nbsp;✓ Sent: <a href="https://solscan.io/tx/${sig}" target="_blank" style="color:#34d399;text-decoration:none;font-family:monospace;font-size:11px">${sig.slice(0,12)}...</a>`;
+        renderPayments();updateAnalytics();
+        // Small delay between tx to let Phantom reset state
+        if(idx<toPay.length-1){
+          progress.innerHTML+=`<br>&nbsp;&nbsp;<span style="color:#6b7280">Preparing next payment...</span>`;
+          await new Promise(r=>setTimeout(r,1500));
+        }
       }
     }catch(e){
-      progress.innerHTML+=`<br>✗ ${c.n}: ${(e.message||'failed').slice(0,60)}`;
+      failCount++;
+      const errMsg=(e.message||'unknown').slice(0,80);
+      progress.innerHTML+=`<br>&nbsp;&nbsp;<span style="color:#fca5a5">✗ Failed: ${errMsg}</span>`;
       dbg('Batch pay failed for '+c.n+': '+e.message,'err');
+      // If user rejected, ask if they want to continue
+      if(errMsg.includes('rejected')||errMsg.includes('User')){
+        if(idx<toPay.length-1){
+          const cont=confirm(`You cancelled ${c.n}'s payment. Continue with the remaining ${toPay.length-idx-1} payment(s)?`);
+          if(!cont){
+            progress.innerHTML+=`<br><br><strong>Payroll run stopped by user.</strong>`;
+            break;
+          }
+        }
+      }
     }
   }
 
   btn.textContent=`Done — ${successCount}/${toPay.length} paid`;
+  progress.innerHTML+=`<br><br><strong>Payroll complete: ${successCount} paid, ${failCount} failed</strong>`;
   toast(`Payroll run: ${successCount}/${toPay.length} successful`);
   fetchBalances();renderPayments();updateAnalytics();
 }
