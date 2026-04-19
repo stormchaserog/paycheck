@@ -311,7 +311,7 @@ async function sendUSDC(){
           {pubkey:sysvarRent,isSigner:false,isWritable:false},
         ],
         programId:assocProgPk,
-        data:new Uint8Array(0)
+        data:new Uint8Array([1])
       }));
     }
 
@@ -355,6 +355,7 @@ async function sendUSDC(){
     row.innerHTML='<div style="display:flex;justify-content:space-between"><div><span style="color:#6ee7b7;font-weight:600">'+amount+' USDC</span> to '+name+'</div><a href="https://solscan.io/tx/'+signature+'" target="_blank" style="color:#34d399;font-size:11px;font-family:monospace;text-decoration:none">'+signature.slice(0,8)+'... &#8599;</a></div><div style="color:#4b5563;font-size:11px;margin-top:4px">'+new Date().toLocaleTimeString()+'</div>';
     document.getElementById('actList').prepend(row);
     toast('Sent '+amount+' USDC to '+name);fetchBal();
+    setTimeout(function(){closeModal('payModal');},2000);
   }catch(e){
     btn.disabled=false;btn.textContent='Sign & Send USDC';
     const m=e.message||'';
@@ -366,6 +367,11 @@ async function sendUSDC(){
 
 
 window.addEventListener('load',async()=>{
+  // Seed example contributor if storage is empty
+  if(contribs.length===0){
+    contribs=[{n:'Example Contributor',w:'F36xnoonUg9rojAyie4WDVSeDCPjwraM1W9vRZgpMzwY',r:'2000'}];
+    localStorage.setItem('pc_c',JSON.stringify(contribs));
+  }
   const p=window.phantom?.solana||window.solana;
   if(p?.isPhantom&&p.isConnected){
     try{const r=await p.connect({onlyIfTrusted:true});pk=r.publicKey.toString();onConn()}catch(e){}
