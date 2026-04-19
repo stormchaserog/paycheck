@@ -1,9 +1,3 @@
 {
-  "buildCommand": null,
-  "outputDirectory": ".",
-  "framework": null,
-  "installCommand": null,
-  "devCommand": null,
-  "cleanUrls": true,
-  "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"gh-pages\" ]; then exit 0; else exit 1; fi"
+  "cleanUrls": true
 }
