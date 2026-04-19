@@ -681,7 +681,9 @@ async function runBatchPay(){
     }
   }
 
-  btn.textContent=`Done — ${successCount}/${toPay.length} paid`;
+  btn.textContent=`✓ Close (${successCount}/${toPay.length} paid)`;
+  btn.disabled=false;
+  btn.onclick=function(){closeModal('batchModal');btn.onclick=function(){runBatchPay();};btn.textContent='Start Payroll Run';};
   progress.innerHTML+=`<br><br><strong>Payroll complete: ${successCount} paid, ${failCount} failed</strong>`;
   toast(`Payroll run: ${successCount}/${toPay.length} successful`);
   fetchBalances();renderPayments();updateAnalytics();
