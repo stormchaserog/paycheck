@@ -288,8 +288,34 @@
 <script>
 const USDC_MINT='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const TOKEN_PROG='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+const ASSOC_TOKEN_PROG='ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1gdH';
 const MEMO_PROG='MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
 const RPC='https://mainnet.helius-rpc.com/?api-key=6d5df401-940b-40c6-a3ee-303b177b37a1';
+
+// Derive Associated Token Account (ATA) for a wallet + mint
+async function deriveATA(walletPk,mintPk){
+  const [ata]=await solanaWeb3.PublicKey.findProgramAddressSync(
+    [walletPk.toBuffer(),new solanaWeb3.PublicKey(TOKEN_PROG).toBuffer(),mintPk.toBuffer()],
+    new solanaWeb3.PublicKey(ASSOC_TOKEN_PROG)
+  );
+  return ata;
+}
+
+// Build create-ATA instruction (idempotent: safe whether account exists or not)
+function buildCreateATAIx(payerPk,ataPk,ownerPk,mintPk){
+  return new solanaWeb3.TransactionInstruction({
+    keys:[
+      {pubkey:payerPk,isSigner:true,isWritable:true},
+      {pubkey:ataPk,isSigner:false,isWritable:true},
+      {pubkey:ownerPk,isSigner:false,isWritable:false},
+      {pubkey:mintPk,isSigner:false,isWritable:false},
+      {pubkey:solanaWeb3.SystemProgram.programId,isSigner:false,isWritable:false},
+      {pubkey:new solanaWeb3.PublicKey(TOKEN_PROG),isSigner:false,isWritable:false}
+    ],
+    programId:new solanaWeb3.PublicKey(ASSOC_TOKEN_PROG),
+    data:new Uint8Array([1]) // Instruction 1 = CreateIdempotent
+  });
+}
 
 // Multi-team state
 let pk=null;
@@ -670,26 +696,37 @@ async function sendOneUSDC(recipient,name,amount,note){
   const tokenProgPk=new solanaWeb3.PublicKey(TOKEN_PROG);
   const memoPk=new solanaWeb3.PublicKey(MEMO_PROG);
 
+  // Sender must have a USDC account to send from
   const senderAccounts=await conn.getParsedTokenAccountsByOwner(senderPk,{mint:mintPk});
   if(!senderAccounts.value.length)throw new Error('No sender USDC account');
   const senderATA=new solanaWeb3.PublicKey(senderAccounts.value[0].pubkey.toString());
 
-  const recipAccounts=await conn.getParsedTokenAccountsByOwner(recipPk,{mint:mintPk});
-  if(!recipAccounts.value.length)throw new Error('Recipient has no USDC account');
-  const recipATA=new solanaWeb3.PublicKey(recipAccounts.value[0].pubkey.toString());
+  // Derive recipient's Associated Token Account
+  const recipATA=await deriveATA(recipPk,mintPk);
+  const recipAccountInfo=await conn.getAccountInfo(recipATA);
+  const needsCreate=!recipAccountInfo;
 
+  const tx=new solanaWeb3.Transaction();
+
+  // If recipient's USDC account doesn't exist yet, create it (sender pays ~0.002 SOL rent)
+  if(needsCreate){
+    tx.add(buildCreateATAIx(senderPk,recipATA,recipPk,mintPk));
+  }
+
+  // Build SPL Token Transfer instruction
   const amountRaw=BigInt(Math.round(amount*1e6));
   const transferData=new Uint8Array(9);
   transferData[0]=3;
   let amt=amountRaw;
   for(let i=1;i<9;i++){transferData[i]=Number(amt&BigInt(0xff));amt>>=BigInt(8);}
 
-  const tx=new solanaWeb3.Transaction();
   tx.add(new solanaWeb3.TransactionInstruction({
     keys:[{pubkey:senderATA,isSigner:false,isWritable:true},{pubkey:recipATA,isSigner:false,isWritable:true},{pubkey:senderPk,isSigner:true,isWritable:false}],
     programId:tokenProgPk,
     data:transferData
   }));
+
+  // Memo instruction
   tx.add(new solanaWeb3.TransactionInstruction({
     keys:[{pubkey:senderPk,isSigner:true,isWritable:false}],
     programId:memoPk,
@@ -837,10 +874,19 @@ async function sendUSDC(){
     const senderATA=new solanaWeb3.PublicKey(senderAccounts.value[0].pubkey.toString());
     dbg('Sender ATA: '+senderATA.toString().slice(0,8));
 
-    const recipAccounts=await conn.getParsedTokenAccountsByOwner(recipPk,{mint:mintPk});
-    if(!recipAccounts.value.length){toast('Recipient has no USDC account. They must hold USDC first.',1);btn.disabled=false;btn.textContent='Sign & Send USDC';dbg('No recipient USDC account','err');return;}
-    const recipATA=new solanaWeb3.PublicKey(recipAccounts.value[0].pubkey.toString());
-    dbg('Recipient ATA: '+recipATA.toString().slice(0,8));
+    // Derive recipient's ATA - create it if needed (sender pays small rent)
+    const recipATA=await deriveATA(recipPk,mintPk);
+    const recipAccountInfo=await conn.getAccountInfo(recipATA);
+    const needsCreate=!recipAccountInfo;
+    dbg('Recipient ATA: '+recipATA.toString().slice(0,8)+(needsCreate?' (will create)':' (exists)'));
+
+    const tx=new solanaWeb3.Transaction();
+
+    // Create recipient's USDC account if it doesn't exist yet
+    if(needsCreate){
+      dbg('Creating USDC account for recipient (~0.002 SOL rent)');
+      tx.add(buildCreateATAIx(senderPk,recipATA,recipPk,mintPk));
+    }
 
     const amountRaw=BigInt(Math.round(amount*1e6));
     const transferData=new Uint8Array(9);
@@ -848,7 +894,6 @@ async function sendUSDC(){
     let amt=amountRaw;
     for(let i=1;i<9;i++){transferData[i]=Number(amt&BigInt(0xff));amt>>=BigInt(8);}
 
-    const tx=new solanaWeb3.Transaction();
     tx.add(new solanaWeb3.TransactionInstruction({
       keys:[{pubkey:senderATA,isSigner:false,isWritable:true},{pubkey:recipATA,isSigner:false,isWritable:true},{pubkey:senderPk,isSigner:true,isWritable:false}],
       programId:tokenProgPk,
