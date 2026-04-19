@@ -186,7 +186,7 @@ const TOKEN_PROG='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 const ASSOC_PROG='ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1gdH';
 const MEMO_PROG='MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
 const RPC='https://mainnet.helius-rpc.com/?api-key=6d5df401-940b-40c6-a3ee-303b177b37a1';
-let pk=null, contribs=JSON.parse(localStorage.getItem('pc_c')||'[]'), pCount=0;
+let pk=null, contribs=JSON.parse(localStorage.getItem('pc_c')||'[]'), payments=JSON.parse(localStorage.getItem('pc_p')||'[]'), pCount=payments.length;
 
 function toast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className=e?'show error':'show';clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),4500)}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
@@ -204,7 +204,7 @@ function onConn(){
   document.getElementById('walletAddress').textContent=pk;
   document.getElementById('heroSection').style.display='none';
   document.getElementById('dashboard').classList.add('visible');
-  toast('Wallet connected');fetchBal();renderC();
+  toast('Wallet connected');fetchBal();renderC();renderPayments();
 }
 
 async function fetchBal(){
@@ -234,6 +234,21 @@ function renderC(){
         <button class="pay-btn" onclick="openPay(${i})">Send USDC</button>
       </div>
     </div>`).join('');
+}
+
+function renderPayments(){
+  if(!payments.length)return;
+  document.getElementById('payCount').textContent=payments.length;
+  document.getElementById('actPanel').style.display='block';
+  const list=document.getElementById('actList');
+  list.innerHTML='';
+  payments.forEach(function(p){
+    const row=document.createElement('div');
+    row.className='activity-item';
+    const ts=new Date(p.ts).toLocaleString();
+    row.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div><span style="color:#6ee7b7;font-weight:600">'+p.amount+' USDC</span> <span style="color:#d1d5db">to '+p.name+'</span>'+(p.note?' <span style="color:#6b7280;font-size:11px">• '+p.note+'</span>':'')+'</div><a href="https://solscan.io/tx/'+p.sig+'" target="_blank" style="color:#34d399;font-size:11px;font-family:monospace;text-decoration:none">'+p.sig.slice(0,8)+'... ↗</a></div><div style="color:#4b5563;font-size:11px;margin-top:4px">'+ts+'</div>';
+    list.appendChild(row);
+  });
 }
 
 function openAdd(){
@@ -350,12 +365,15 @@ async function sendUSDC(){
     document.getElementById('payTxLink').textContent=signature.slice(0,20)+'... View on Solscan';
     document.getElementById('payTx').classList.add('show');
     btn.textContent='Sent!';
-    pCount++;document.getElementById('payCount').textContent=pCount;
+    document.getElementById('payCount').textContent=payments.length+1;
     document.getElementById('actPanel').style.display='block';
     const row=document.createElement('div');
     row.className='activity-item';
     row.innerHTML='<div style="display:flex;justify-content:space-between"><div><span style="color:#6ee7b7;font-weight:600">'+amount+' USDC</span> <span style="color:#d1d5db">to '+name+'</span>'+(note?' <span style="color:#6b7280;font-size:11px">• '+note+'</span>':'')+'</div><a href="https://solscan.io/tx/'+signature+'" target="_blank" style="color:#34d399;font-size:11px;font-family:monospace;text-decoration:none">'+signature.slice(0,8)+'... ↗</a></div><div style="color:#4b5563;font-size:11px;margin-top:4px">'+new Date().toLocaleTimeString()+'</div>';
     document.getElementById('actList').prepend(row);
+    // Persist to localStorage
+    payments.unshift({amount:amount,name:name,note:note,sig:signature,ts:Date.now()});
+    localStorage.setItem('pc_p',JSON.stringify(payments.slice(0,50)));
     toast('Sent '+amount+' USDC to '+name);fetchBal();
     setTimeout(function(){closeModal('payModal');},2500);
   }catch(e){
