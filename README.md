@@ -2,52 +2,39 @@
 
 **Stablecoin payroll with yield-powered advances for crypto-native teams.**
 
-Built for [Colosseum Frontier 2026](https://colosseum.com/frontier).  
-Built by [White Claw](https://twitter.com/whiteclawonsol) — crypto-native fintech powered by AI agents.  
-Built on Solana.
+🔗 Live: **https://paycheck.whiteclaw.dev**
+🏢 Company: **https://whiteclaw.dev**
+🐦 Follow: [@whiteclawonsol](https://twitter.com/whiteclawonsol)
+💎 Token: **$WCLAW** on Solana
+🏆 Built for [Colosseum Frontier 2026](https://colosseum.com/frontier)
 
 ---
 
 ## What it does
 
-Crypto-native teams set up payroll once.  
-Funds sit in a secure vault and earn yield automatically.  
-Contributors get paid on schedule.  
-Contributors can advance their next payment instantly at zero cost.  
-The yield covers it.
+Crypto-native teams use Paycheck to run payroll on Solana.
 
----
+- **Connect Phantom** — wallet-native identity
+- **Add contributors** — name, wallet, role, rate, period (daily/weekly/biweekly/monthly)
+- **Send USDC** — individual payments or full payroll runs
+- **Yield advances** — idle payroll funds earn yield via Reflect, funding free contributor advances
+- **On-chain records** — every payment has a memo, verifiable on Solscan forever
+- **Analytics + reports** — month/all-time stats, CSV export, printable PDF reports
+- **Multi-team support** — manage multiple DAOs or projects from one dashboard
 
-## The problem
+## Why it exists
 
-Most crypto teams are still paying contributors manually.  
-Copy addresses. Send USDC one by one. No records. No safety. No scheduling.  
-It's slow, error-prone, and completely unscalable.
+Most crypto teams still run payroll manually — pasting wallet addresses into Phantom, one at a time, no records, no safety, no yield. It's 2026. We can do better.
 
-Paycheck fixes that.
+## Built with
 
----
+- **Solana** mainnet
+- **Phantom** wallet integration
+- **Squads** multisig (coming)
+- **Reflect** USDC+ yield (coming)
+- **Helius** RPC
+- Pure HTML/JS — no framework, ships instantly
 
-## Tech stack
+## White Claw
 
-- **Solana** (mainnet)
-- **Anchor** (on-chain program)
-- **Phantom / Privy** (wallet + auth)
-- **Squads** (multisig payroll vault)
-- **Reflect USDC+** (yield on idle funds)
-- **Helius** (chain data)
-- **Next.js + Tailwind** (frontend)
-
----
-
-## WCLAW token
-
-Paycheck is the first product in the White Claw protocol ecosystem.  
-WCLAW stakers earn a share of protocol fees, boosted yield, and governance rights.
-
----
-
-## Status
-
-🔨 Building — Colosseum Frontier 2026  
-Follow [@whiteclawonsol](https://twitter.com/whiteclawonsol) for daily build updates.
+White Claw is a crypto-native fintech company. Paycheck is the first product. More to come.
