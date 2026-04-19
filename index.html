@@ -288,13 +288,13 @@
 <script>
 const USDC_MINT='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const TOKEN_PROG='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
-const ASSOC_TOKEN_PROG='ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1gdH';
+const ASSOC_TOKEN_PROG='ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL';
 const MEMO_PROG='MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
 const RPC='https://mainnet.helius-rpc.com/?api-key=6d5df401-940b-40c6-a3ee-303b177b37a1';
 
 // Derive Associated Token Account (ATA) for a wallet + mint
 async function deriveATA(walletPk,mintPk){
-  const [ata]=await solanaWeb3.PublicKey.findProgramAddressSync(
+  const [ata]=solanaWeb3.PublicKey.findProgramAddressSync(
     [walletPk.toBuffer(),new solanaWeb3.PublicKey(TOKEN_PROG).toBuffer(),mintPk.toBuffer()],
     new solanaWeb3.PublicKey(ASSOC_TOKEN_PROG)
   );
