@@ -1,12 +1,5 @@
 {
-  "outputDirectory": "out2",
-  "builds": [
-    {
-      "src": "out2/index.html",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    { "src": "/(.*)", "dest": "/out2/$1" }
-  ]
+  "version": 2,
+  "builds": [{"src": "index.html", "use": "@vercel/static"}],
+  "routes": [{"src": "/(.*)", "dest": "/index.html"}]
 }

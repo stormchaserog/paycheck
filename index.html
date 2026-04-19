@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paycheck by White Claw</title>
+  <meta name="description" content="Stablecoin payroll with yield-powered advances for crypto-native teams. Built on Solana.">
+  <meta property="og:title" content="Paycheck by White Claw">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@whiteclawonsol">
+  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
+    nav{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid #111;position:sticky;top:0;background:rgba(0,0,0,0.95);backdrop-filter:blur(12px);z-index:100}
+    .nav-logo{font-weight:700;font-size:18px}.nav-logo span{color:#9ca3af;font-weight:400;font-size:14px;margin-left:8px}
+    #connectBtn{background:#fff;color:#000;font-weight:600;padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-size:14px}
+    #connectBtn.connected{background:#065f46;color:#6ee7b7;font-family:monospace;font-size:12px;padding:10px 16px}
+    .hero{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 65px);padding:0 24px;text-align:center}
+    .hero-eyebrow{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#9ca3af;margin-bottom:24px}
+    .hero-title{font-size:clamp(56px,10vw,96px);font-weight:700;letter-spacing:-.03em;margin-bottom:24px;line-height:1.05}
+    .hero-sub{font-size:clamp(18px,2.5vw,22px);color:#d1d5db;margin-bottom:16px;line-height:1.6;max-width:640px}
+    .hero-body{color:#6b7280;max-width:520px;margin:0 auto 48px;line-height:1.75;font-size:16px}
+    .btn-row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+    .btn-primary{background:#fff;color:#000;font-weight:600;padding:16px 32px;border-radius:8px;border:none;cursor:pointer;font-size:16px;text-decoration:none}
+    .btn-secondary{background:transparent;color:#fff;font-weight:600;padding:16px 32px;border-radius:8px;border:1px solid #374151;cursor:pointer;font-size:16px;text-decoration:none}
+    #dashboard{display:none;padding:40px 24px;max-width:1000px;margin:0 auto}
+    #dashboard.visible{display:block}
+    .dash-header{margin-bottom:32px}
+    .dash-header h2{font-size:24px;font-weight:700;margin-bottom:8px}
+    .dash-wallet{color:#6b7280;font-size:13px;font-family:monospace;background:#0a0a0a;border:1px solid #1f2937;padding:6px 12px;border-radius:6px;display:inline-block;margin-top:6px}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px}
+    .card{background:#0a0a0a;border:1px solid #1f2937;border-radius:12px;padding:24px}
+    .card-label{font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+    .card-value{font-size:28px;font-weight:700}
+    .card-value.green{color:#6ee7b7}
+    .card-sub{font-size:12px;color:#4b5563;margin-top:4px}
+    .panel{background:#0a0a0a;border:1px solid #1f2937;border-radius:12px;padding:24px;margin-bottom:20px}
+    .panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .panel-header h3{font-size:16px;font-weight:600}
+    .add-btn{background:#fff;color:#000;font-weight:600;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px}
+    .contributor-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid #111}
+    .contributor-row:last-child{border-bottom:none}
+    .contrib-info{display:flex;align-items:center;gap:12px}
+    .contrib-avatar{width:36px;height:36px;border-radius:50%;background:#1f2937;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#9ca3af;flex-shrink:0}
+    .contrib-name{font-weight:500;font-size:14px}
+    .contrib-wallet{font-size:11px;color:#6b7280;font-family:monospace;margin-top:2px}
+    .contrib-actions{display:flex;align-items:center;gap:10px}
+    .pay-btn{background:#1a1a1a;border:1px solid #374151;color:#fff;padding:7px 16px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600}
+    .contrib-rate{font-size:12px;color:#9ca3af;white-space:nowrap}
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center}
+    .modal.open{display:flex}
+    .modal-box{background:#0a0a0a;border:1px solid #1f2937;border-radius:16px;padding:32px;max-width:460px;width:90%}
+    .modal-box h3{font-size:20px;font-weight:700;margin-bottom:8px}
+    .modal-box p{color:#6b7280;font-size:14px;margin-bottom:20px;line-height:1.6}
+    .field{margin-bottom:16px}
+    .field label{display:block;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+    .field input{width:100%;background:#111;border:1px solid #1f2937;color:#fff;padding:12px 16px;border-radius:8px;font-size:15px;outline:none}
+    .modal-btns{display:flex;gap:12px;margin-top:24px}
+    .modal-cancel{flex:1;background:transparent;border:1px solid #374151;color:#9ca3af;padding:12px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}
+    .modal-submit{flex:2;background:#fff;color:#000;padding:12px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;border:none}
+    .modal-submit:disabled{background:#374151;color:#6b7280;cursor:not-allowed}
+    .tx-result{background:#0a2818;border:1px solid #065f46;border-radius:10px;padding:16px;margin-top:16px;display:none}
+    .tx-result.show{display:block}
+    .tx-result p{font-size:13px;color:#6ee7b7;margin-bottom:8px}
+    .tx-result a{color:#34d399;font-size:12px;font-family:monospace;word-break:break-all;text-decoration:none}
+    .activity-item{padding:12px 0;border-bottom:1px solid #111;font-size:13px}
+    .activity-item:last-child{border-bottom:none}
+    section.info{padding:96px 24px;border-top:1px solid #1f2937}
+    h2.st{font-size:32px;font-weight:700;text-align:center;margin-bottom:64px}
+    .hg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;max-width:900px;margin:0 auto}
+    .hi{text-align:center}
+    .hn{font-size:48px;font-weight:700;color:#374151;margin-bottom:16px}
+    .ht{font-weight:600;font-size:18px;margin-bottom:8px}
+    .hd{color:#9ca3af;font-size:14px;line-height:1.6}
+    .pills{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+    .pill{border:1px solid #1f2937;padding:8px 20px;border-radius:999px;font-size:14px;color:#6b7280}
+    footer{padding:48px 24px;border-top:1px solid #1f2937;text-align:center;color:#4b5563;font-size:14px}
+    footer a{color:#6b7280;text-decoration:none}
+    #toast{position:fixed;bottom:24px;right:24px;background:#065f46;color:#6ee7b7;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:500;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;max-width:320px}
+    #toast.show{opacity:1}
+    #toast.error{background:#7f1d1d;color:#fca5a5}
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-logo">Paycheck <span>by White Claw</span></div>
+    <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+  </nav>
+
+  <div id="heroSection">
+    <div class="hero">
+      <p class="hero-eyebrow">White Claw — Crypto-Native Fintech</p>
+      <h1 class="hero-title">Paycheck</h1>
+      <p class="hero-sub">Stablecoin payroll with yield-powered advances for crypto-native teams.</p>
+      <p class="hero-body">Set up your team once. Funds earn yield automatically. Contributors get paid on schedule and can advance instantly at zero cost.</p>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="connectWallet()">Connect Wallet to Start</button>
+        <a href="https://twitter.com/whiteclawonsol" target="_blank" class="btn-secondary">Follow Build</a>
+      </div>
+    </div>
+    <section class="info">
+      <h2 class="st">How it works</h2>
+      <div class="hg">
+        <div class="hi"><div class="hn">01</div><div class="ht">Connect wallet</div><div class="hd">Sign in with Phantom. Your wallet is your identity and control key.</div></div>
+        <div class="hi"><div class="hn">02</div><div class="ht">Add your team</div><div class="hd">Add contributors by wallet address. Set payment amounts and schedules.</div></div>
+        <div class="hi"><div class="hn">03</div><div class="ht">Funds earn yield</div><div class="hd">Idle payroll funds earn yield automatically via Reflect while they wait.</div></div>
+        <div class="hi"><div class="hn">04</div><div class="ht">Pay and advance</div><div class="hd">Contributors get paid on schedule or advance instantly. Zero fees.</div></div>
+      </div>
+    </section>
+    <section class="info" style="text-align:center">
+      <h2 class="st">Built on Solana</h2>
+      <p style="color:#9ca3af;max-width:560px;margin:0 auto 48px;line-height:1.75">Sub-second settlement. Near-zero fees. Composable with Phantom, Squads, and Reflect natively.</p>
+      <div class="pills"><span class="pill">Phantom</span><span class="pill">Squads</span><span class="pill">Reflect</span><span class="pill">Helius</span><span class="pill">Anchor</span></div>
+    </section>
+  </div>
+
+  <div id="dashboard">
+    <div class="dash-header">
+      <h2>Payroll Dashboard</h2>
+      <div class="dash-wallet" id="walletAddress">—</div>
+    </div>
+    <div class="cards">
+      <div class="card"><div class="card-label">USDC Balance</div><div class="card-value green" id="usdcBalance">—</div><div class="card-sub">Available to send</div></div>
+      <div class="card"><div class="card-label">SOL Balance</div><div class="card-value" id="solBalance">—</div><div class="card-sub">For fees</div></div>
+      <div class="card"><div class="card-label">Contributors</div><div class="card-value" id="contribCount">0</div><div class="card-sub">Team members</div></div>
+      <div class="card"><div class="card-label">Payments Sent</div><div class="card-value" id="payCount">0</div><div class="card-sub">This session</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <h3>Your Team</h3>
+        <button class="add-btn" onclick="openAdd()">+ Add Contributor</button>
+      </div>
+      <div id="contribList"><div style="color:#4b5563;font-size:14px;padding:16px 0;text-align:center">No contributors yet — add your first team member above.</div></div>
+    </div>
+    <div class="panel" id="actPanel" style="display:none">
+      <h3 style="margin-bottom:16px">Payment Activity</h3>
+      <div id="actList"></div>
+    </div>
+  </div>
+
+  <!-- Add Contributor Modal -->
+  <div class="modal" id="addModal">
+    <div class="modal-box">
+      <h3>Add Contributor</h3>
+      <p>Add a team member by their Solana wallet address to send them USDC payments.</p>
+      <div class="field"><label>Name</label><input id="c_name" placeholder="e.g. Alice Dev"></div>
+      <div class="field"><label>Solana Wallet Address</label><input id="c_wallet" placeholder="Paste wallet address..." style="font-family:monospace;font-size:12px"></div>
+      <div class="field"><label>Monthly Rate (USDC)</label><input id="c_rate" type="number" placeholder="e.g. 2000"></div>
+      <div class="modal-btns">
+        <button class="modal-cancel" onclick="closeModal('addModal')">Cancel</button>
+        <button class="modal-submit" onclick="saveContrib()">Add to Team</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Send Payment Modal -->
+  <div class="modal" id="payModal">
+    <div class="modal-box">
+      <h3>Send USDC Payment</h3>
+      <p>This will sign a real USDC transfer on Solana mainnet using your Phantom wallet.</p>
+      <div class="field"><label>To</label><input id="p_name" readonly style="color:#9ca3af"></div>
+      <div class="field"><label>Wallet</label><input id="p_wallet" readonly style="font-family:monospace;font-size:11px;color:#6b7280"></div>
+      <div class="field"><label>Amount (USDC)</label><input id="p_amount" type="number" placeholder="e.g. 500" min="0.01" step="0.01"></div>
+      <div class="field"><label>Note</label><input id="p_note" placeholder="e.g. Week 1 payment" maxlength="50"></div>
+      <div class="tx-result" id="payTx">
+        <p>Payment sent on Solana mainnet</p>
+        <a id="payTxLink" href="#" target="_blank">View on Solscan</a>
+      </div>
+      <div class="modal-btns">
+        <button class="modal-cancel" onclick="closeModal('payModal')">Cancel</button>
+        <button class="modal-submit" id="payBtn" onclick="sendUSDC()">Sign &amp; Send USDC</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Paycheck by White Claw — Built for Colosseum Frontier 2026</p>
+    <p style="margin-top:8px"><a href="https://twitter.com/whiteclawonsol">@whiteclawonsol</a> · $WCLAW</p>
+  </footer>
+  <div id="toast"></div>
+
+<script>
+const USDC_MINT='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const TOKEN_PROG='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+const ASSOC_PROG='ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1gdH';
+const MEMO_PROG='MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
+const RPC='https://mainnet.helius-rpc.com/?api-key=6d5df401-940b-40c6-a3ee-303b177b37a1';
+let pk=null, contribs=JSON.parse(localStorage.getItem('pc_c')||'[]'), pCount=0;
+
+function toast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className=e?'show error':'show';clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),4500)}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+
+async function connectWallet(){
+  const p=window.phantom?.solana||window.solana;
+  if(!p?.isPhantom){toast('Install Phantom at phantom.com',1);window.open('https://phantom.com','_blank');return}
+  try{const r=await p.connect();pk=r.publicKey.toString();onConn()}catch(e){if(e.code!==4001)toast('Connect failed',1)}
+}
+
+function onConn(){
+  const s=pk.slice(0,4)+'...'+pk.slice(-4);
+  const b=document.getElementById('connectBtn');
+  b.textContent=s;b.classList.add('connected');
+  document.getElementById('walletAddress').textContent=pk;
+  document.getElementById('heroSection').style.display='none';
+  document.getElementById('dashboard').classList.add('visible');
+  toast('Wallet connected');fetchBal();renderC();
+}
+
+async function fetchBal(){
+  const conn=new solanaWeb3.Connection(RPC,'confirmed');
+  const p2=new solanaWeb3.PublicKey(pk);
+  try{const l=await conn.getBalance(p2);document.getElementById('solBalance').textContent=(l/1e9).toFixed(4)+' SOL'}catch(e){}
+  try{
+    const m=new solanaWeb3.PublicKey(USDC_MINT);
+    const r=await conn.getParsedTokenAccountsByOwner(p2,{mint:m});
+    const b=r.value.length>0?r.value[0].account.data.parsed.info.tokenAmount.uiAmount:0;
+    document.getElementById('usdcBalance').textContent=(b||0).toFixed(2)+' USDC';
+  }catch(e){}
+}
+
+function renderC(){
+  document.getElementById('contribCount').textContent=contribs.length;
+  const l=document.getElementById('contribList');
+  if(!contribs.length){l.innerHTML='<div style="color:#4b5563;font-size:14px;padding:16px 0;text-align:center">No contributors yet — add your first team member above.</div>';return}
+  l.innerHTML=contribs.map((c,i)=>`
+    <div class="contributor-row">
+      <div class="contrib-info">
+        <div class="contrib-avatar">${c.n.charAt(0).toUpperCase()}</div>
+        <div><div class="contrib-name">${c.n}</div><div class="contrib-wallet">${c.w.slice(0,8)}...${c.w.slice(-6)}</div></div>
+      </div>
+      <div class="contrib-actions">
+        ${c.r?`<div class="contrib-rate">${Number(c.r).toLocaleString()} USDC/mo</div>`:''}
+        <button class="pay-btn" onclick="openPay(${i})">Send USDC</button>
+      </div>
+    </div>`).join('');
+}
+
+function openAdd(){
+  document.getElementById('c_name').value='';
+  document.getElementById('c_wallet').value='';
+  document.getElementById('c_rate').value='';
+  document.getElementById('addModal').classList.add('open');
+}
+
+function saveContrib(){
+  const n=document.getElementById('c_name').value.trim();
+  const w=document.getElementById('c_wallet').value.trim();
+  const r=document.getElementById('c_rate').value;
+  if(!n){toast('Enter a name',1);return}
+  if(!w||w.length<32){toast('Enter a valid wallet address',1);return}
+  try{new solanaWeb3.PublicKey(w)}catch(e){toast('Invalid wallet address',1);return}
+  contribs.push({n,w,r});
+  localStorage.setItem('pc_c',JSON.stringify(contribs));
+  closeModal('addModal');renderC();toast(n+' added');
+}
+
+function openPay(i){
+  const c=contribs[i];
+  document.getElementById('p_name').value=c.n;
+  document.getElementById('p_wallet').value=c.w;
+  document.getElementById('p_amount').value=c.r?(Number(c.r)/4).toFixed(2):'';
+  document.getElementById('p_note').value='';
+  document.getElementById('payTx').classList.remove('show');
+  const btn=document.getElementById('payBtn');btn.disabled=false;btn.textContent='Sign & Send USDC';
+  document.getElementById('payModal').classList.add('open');
+}
+
+async function getATA(wallet,mint){
+  const [ata]=await solanaWeb3.PublicKey.findProgramAddress(
+    [new solanaWeb3.PublicKey(wallet).toBuffer(),new solanaWeb3.PublicKey(TOKEN_PROG).toBuffer(),new solanaWeb3.PublicKey(mint).toBuffer()],
+    new solanaWeb3.PublicKey(ASSOC_PROG)
+  );
+  return ata;
+}
+
+async function sendUSDC(){
+  const recipient=document.getElementById('p_wallet').value.trim();
+  const name=document.getElementById('p_name').value;
+  const amount=parseFloat(document.getElementById('p_amount').value);
+  const note=document.getElementById('p_note').value||'Paycheck payment';
+  if(!amount||amount<=0){toast('Enter a valid amount',1);return}
+  const btn=document.getElementById('payBtn');
+  btn.disabled=true;btn.textContent='Checking accounts...';
+  try{
+    const prov=window.phantom?.solana||window.solana;
+    const conn=new solanaWeb3.Connection(RPC,'confirmed');
+    const senderPk=new solanaWeb3.PublicKey(pk);
+    const recipPk=new solanaWeb3.PublicKey(recipient);
+    const mintPk=new solanaWeb3.PublicKey(USDC_MINT);
+    const tokenProgPk=new solanaWeb3.PublicKey(TOKEN_PROG);
+    const memoPk=new solanaWeb3.PublicKey(MEMO_PROG);
+
+    // Get sender actual USDC token account
+    const senderAccounts=await conn.getParsedTokenAccountsByOwner(senderPk,{mint:mintPk});
+    if(!senderAccounts.value.length){
+      toast('You do not have a USDC token account',1);
+      btn.disabled=false;btn.textContent='Sign & Send USDC';return;
+    }
+    const senderATA=new solanaWeb3.PublicKey(senderAccounts.value[0].pubkey.toString());
+
+    // Get recipient actual USDC token account
+    const recipAccounts=await conn.getParsedTokenAccountsByOwner(recipPk,{mint:mintPk});
+    if(!recipAccounts.value.length){
+      toast('Recipient does not have a USDC account. They need to hold USDC first.',1);
+      btn.disabled=false;btn.textContent='Sign & Send USDC';return;
+    }
+    const recipATA=new solanaWeb3.PublicKey(recipAccounts.value[0].pubkey.toString());
+
+    // Build SPL transfer instruction
+    const amountRaw=BigInt(Math.round(amount*1e6));
+    const transferData=new Uint8Array(9);
+    transferData[0]=3;
+    let amt=amountRaw;
+    for(let i=1;i<9;i++){transferData[i]=Number(amt&BigInt(0xff));amt>>=BigInt(8);}
+
+    const tx=new solanaWeb3.Transaction();
+    tx.add(new solanaWeb3.TransactionInstruction({
+      keys:[
+        {pubkey:senderATA,isSigner:false,isWritable:true},
+        {pubkey:recipATA,isSigner:false,isWritable:true},
+        {pubkey:senderPk,isSigner:true,isWritable:false},
+      ],
+      programId:tokenProgPk,
+      data:transferData
+    }));
+    tx.add(new solanaWeb3.TransactionInstruction({
+      keys:[{pubkey:senderPk,isSigner:true,isWritable:false}],
+      programId:memoPk,
+      data:new TextEncoder().encode('paycheck:'+amount+':USDC:'+encodeURIComponent(note))
+    }));
+
+    const {blockhash}=await conn.getLatestBlockhash();
+    tx.recentBlockhash=blockhash;tx.feePayer=senderPk;
+    btn.textContent='Waiting for signature...';
+    const {signature}=await prov.signAndSendTransaction(tx);
+
+    document.getElementById('payTxLink').href='https://solscan.io/tx/'+signature;
+    document.getElementById('payTxLink').textContent=signature.slice(0,20)+'... View on Solscan';
+    document.getElementById('payTx').classList.add('show');
+    btn.textContent='Sent!';
+    pCount++;document.getElementById('payCount').textContent=pCount;
+    document.getElementById('actPanel').style.display='block';
+    const row=document.createElement('div');
+    row.className='activity-item';
+    row.innerHTML='<div style="display:flex;justify-content:space-between"><div><span style="color:#6ee7b7;font-weight:600">'+amount+' USDC</span> to '+name+'</div><a href="https://solscan.io/tx/'+signature+'" target="_blank" style="color:#34d399;font-size:11px;font-family:monospace;text-decoration:none">'+signature.slice(0,8)+'... ↗</a></div><div style="color:#4b5563;font-size:11px;margin-top:4px">'+new Date().toLocaleTimeString()+'</div>';
+    document.getElementById('actList').prepend(row);
+    toast('Sent '+amount+' USDC to '+name);fetchBal();
+    setTimeout(function(){closeModal('payModal');},2500);
+  }catch(e){
+    btn.disabled=false;btn.textContent='Sign & Send USDC';
+    const m=e.message||'';
+    if(m.includes('rejected')||m.includes('User'))toast('Cancelled',1);
+    else{toast('Error: '+m.slice(0,100),1);console.error('USDC error:',e);}
+  }
+}
+
+
+
+window.addEventListener('load',async()=>{
+  // Seed example contributor if storage is empty
+  if(contribs.length===0){
+    contribs=[{n:'Example Contributor',w:'F36xnoonUg9rojAyie4WDVSeDCPjwraM1W9vRZgpMzwY',r:'2000'}];
+    localStorage.setItem('pc_c',JSON.stringify(contribs));
+  }
+  const p=window.phantom?.solana||window.solana;
+  if(p?.isPhantom&&p.isConnected){
+    try{const r=await p.connect({onlyIfTrusted:true});pk=r.publicKey.toString();onConn()}catch(e){}
+  }
+});
+</script>
+</body>
+</html>
+/* redeployed Sun Apr 19 16:13:57 CDT 2026 */
