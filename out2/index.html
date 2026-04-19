@@ -13,7 +13,10 @@
     *{margin:0;padding:0;box-sizing:border-box}
     body{background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
     nav{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid #111;position:sticky;top:0;background:rgba(0,0,0,0.95);backdrop-filter:blur(12px);z-index:100}
+    .nav-left{display:flex;align-items:center;gap:24px}
     .nav-logo{font-weight:700;font-size:18px}.nav-logo span{color:#9ca3af;font-weight:400;font-size:14px;margin-left:8px}
+    .team-switcher{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#0a0a0a;border:1px solid #1f2937;border-radius:8px;cursor:pointer;font-size:13px}
+    .team-switcher:hover{border-color:#374151}
     #connectBtn{background:#fff;color:#000;font-weight:600;padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-size:14px}
     #connectBtn.connected{background:#065f46;color:#6ee7b7;font-family:monospace;font-size:12px;padding:10px 16px}
     .hero{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 65px);padding:0 24px;text-align:center}
@@ -26,9 +29,12 @@
     .btn-secondary{background:transparent;color:#fff;font-weight:600;padding:16px 32px;border-radius:8px;border:1px solid #374151;cursor:pointer;font-size:16px;text-decoration:none}
     #dashboard{display:none;padding:40px 24px;max-width:1000px;margin:0 auto}
     #dashboard.visible{display:block}
-    .dash-header{margin-bottom:32px}
-    .dash-header h2{font-size:24px;font-weight:700;margin-bottom:8px}
+    .dash-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;flex-wrap:wrap;gap:16px}
+    .dash-header-left h2{font-size:24px;font-weight:700;margin-bottom:8px}
     .dash-wallet{color:#6b7280;font-size:13px;font-family:monospace;background:#0a0a0a;border:1px solid #1f2937;padding:6px 12px;border-radius:6px;display:inline-block;margin-top:6px}
+    .dash-header-right{display:flex;gap:8px}
+    .icon-btn{background:#0a0a0a;border:1px solid #1f2937;color:#9ca3af;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px;transition:all .2s}
+    .icon-btn:hover{border-color:#374151;color:#fff}
     .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px}
     .card{background:#0a0a0a;border:1px solid #1f2937;border-radius:12px;padding:24px}
     .card-label{font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
@@ -38,34 +44,42 @@
     .panel{background:#0a0a0a;border:1px solid #1f2937;border-radius:12px;padding:24px;margin-bottom:20px}
     .panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
     .panel-header h3{font-size:16px;font-weight:600}
+    .panel-actions{display:flex;gap:8px}
     .add-btn{background:#fff;color:#000;font-weight:600;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px}
-    .contributor-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid #111}
+    .contributor-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid #111;cursor:pointer;transition:background .15s;border-radius:6px;padding:14px 8px;margin:0 -8px}
+    .contributor-row:hover{background:#0d0d0d}
     .contributor-row:last-child{border-bottom:none}
-    .contrib-info{display:flex;align-items:center;gap:12px}
+    .contrib-info{display:flex;align-items:center;gap:12px;flex:1}
     .contrib-avatar{width:36px;height:36px;border-radius:50%;background:#1f2937;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#9ca3af;flex-shrink:0}
     .contrib-name{font-weight:500;font-size:14px}
     .contrib-wallet{font-size:11px;color:#6b7280;font-family:monospace;margin-top:2px}
-    .contrib-actions{display:flex;align-items:center;gap:10px}
-    .pay-btn{background:#1a1a1a;border:1px solid #374151;color:#fff;padding:7px 16px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600}
-    .contrib-rate{font-size:12px;color:#9ca3af;white-space:nowrap}
-    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center}
+    .contrib-actions{display:flex;align-items:center;gap:8px}
+    .pay-btn{background:#1a1a1a;border:1px solid #374151;color:#fff;padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600}
+    .edit-btn{background:transparent;border:1px solid #1f2937;color:#6b7280;padding:7px 10px;border-radius:6px;font-size:12px;cursor:pointer}
+    .edit-btn:hover{color:#fff;border-color:#374151}
+    .contrib-rate{font-size:12px;color:#9ca3af;white-space:nowrap;min-width:80px;text-align:right}
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;padding:20px}
     .modal.open{display:flex}
-    .modal-box{background:#0a0a0a;border:1px solid #1f2937;border-radius:16px;padding:32px;max-width:460px;width:90%}
+    .modal-box{background:#0a0a0a;border:1px solid #1f2937;border-radius:16px;padding:32px;max-width:460px;width:100%;max-height:90vh;overflow-y:auto}
     .modal-box h3{font-size:20px;font-weight:700;margin-bottom:8px}
     .modal-box p{color:#6b7280;font-size:14px;margin-bottom:20px;line-height:1.6}
     .field{margin-bottom:16px}
     .field label{display:block;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
-    .field input{width:100%;background:#111;border:1px solid #1f2937;color:#fff;padding:12px 16px;border-radius:8px;font-size:15px;outline:none}
+    .field input,.field select{width:100%;background:#111;border:1px solid #1f2937;color:#fff;padding:12px 16px;border-radius:8px;font-size:15px;outline:none}
+    .field input:focus,.field select:focus{border-color:#374151}
     .modal-btns{display:flex;gap:12px;margin-top:24px}
     .modal-cancel{flex:1;background:transparent;border:1px solid #374151;color:#9ca3af;padding:12px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}
     .modal-submit{flex:2;background:#fff;color:#000;padding:12px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;border:none}
     .modal-submit:disabled{background:#374151;color:#6b7280;cursor:not-allowed}
+    .modal-danger{background:#7f1d1d;color:#fca5a5;border:none;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:13px;margin-top:8px;width:100%}
+    .modal-danger:hover{background:#991b1b;color:#fee2e2}
     .tx-result{background:#0a2818;border:1px solid #065f46;border-radius:10px;padding:16px;margin-top:16px;display:none}
     .tx-result.show{display:block}
     .tx-result p{font-size:13px;color:#6ee7b7;margin-bottom:8px}
     .tx-result a{color:#34d399;font-size:12px;font-family:monospace;word-break:break-all;text-decoration:none}
     .activity-item{padding:12px 0;border-bottom:1px solid #111;font-size:13px}
     .activity-item:last-child{border-bottom:none}
+    .empty-state{color:#4b5563;font-size:14px;padding:16px 0;text-align:center}
     section.info{padding:96px 24px;border-top:1px solid #1f2937}
     h2.st{font-size:32px;font-weight:700;text-align:center;margin-bottom:64px}
     .hg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;max-width:900px;margin:0 auto}
@@ -80,11 +94,23 @@
     #toast{position:fixed;bottom:24px;right:24px;background:#065f46;color:#6ee7b7;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:500;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;max-width:320px}
     #toast.show{opacity:1}
     #toast.error{background:#7f1d1d;color:#fca5a5}
+    #debugPanel{display:none;position:fixed;bottom:24px;left:24px;background:#0a0a0a;border:1px solid #1f2937;border-radius:8px;padding:16px;max-width:400px;max-height:300px;overflow-y:auto;font-family:monospace;font-size:11px;color:#6b7280;z-index:500}
+    #debugPanel.show{display:block}
+    #debugPanel .log{padding:4px 0;border-bottom:1px solid #111}
+    #debugPanel .log:last-child{border-bottom:none}
+    #debugPanel .err{color:#fca5a5}
+    #debugPanel .ok{color:#6ee7b7}
   </style>
 </head>
 <body>
   <nav>
-    <div class="nav-logo">Paycheck <span>by White Claw</span></div>
+    <div class="nav-left">
+      <div class="nav-logo">Paycheck <span>by White Claw</span></div>
+      <div class="team-switcher" id="teamSwitcher" onclick="openTeamSwitcher()" style="display:none">
+        <span id="teamName">Main Team</span>
+        <span style="color:#6b7280">▼</span>
+      </div>
+    </div>
     <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
   </nav>
 
@@ -103,9 +129,9 @@
       <h2 class="st">How it works</h2>
       <div class="hg">
         <div class="hi"><div class="hn">01</div><div class="ht">Connect wallet</div><div class="hd">Sign in with Phantom. Your wallet is your identity and control key.</div></div>
-        <div class="hi"><div class="hn">02</div><div class="ht">Add your team</div><div class="hd">Add contributors by wallet address. Set payment amounts and schedules.</div></div>
-        <div class="hi"><div class="hn">03</div><div class="ht">Funds earn yield</div><div class="hd">Idle payroll funds earn yield automatically via Reflect while they wait.</div></div>
-        <div class="hi"><div class="hn">04</div><div class="ht">Pay and advance</div><div class="hd">Contributors get paid on schedule or advance instantly. Zero fees.</div></div>
+        <div class="hi"><div class="hn">02</div><div class="ht">Add your team</div><div class="hd">Add contributors by wallet. Set amounts and schedules.</div></div>
+        <div class="hi"><div class="hn">03</div><div class="ht">Funds earn yield</div><div class="hd">Idle payroll funds earn yield automatically via Reflect.</div></div>
+        <div class="hi"><div class="hn">04</div><div class="ht">Pay and advance</div><div class="hd">Contributors get paid or advance instantly. Zero fees.</div></div>
       </div>
     </section>
     <section class="info" style="text-align:center">
@@ -117,39 +143,74 @@
 
   <div id="dashboard">
     <div class="dash-header">
-      <h2>Payroll Dashboard</h2>
-      <div class="dash-wallet" id="walletAddress">—</div>
+      <div class="dash-header-left">
+        <h2>Payroll Dashboard</h2>
+        <div class="dash-wallet" id="walletAddress">—</div>
+      </div>
+      <div class="dash-header-right">
+        <button class="icon-btn" onclick="toggleDebug()" title="Debug">⚙ Debug</button>
+        <button class="icon-btn" onclick="fetchBalances()" title="Refresh">↻ Refresh</button>
+      </div>
     </div>
     <div class="cards">
       <div class="card"><div class="card-label">USDC Balance</div><div class="card-value green" id="usdcBalance">—</div><div class="card-sub">Available to send</div></div>
       <div class="card"><div class="card-label">SOL Balance</div><div class="card-value" id="solBalance">—</div><div class="card-sub">For fees</div></div>
-      <div class="card"><div class="card-label">Contributors</div><div class="card-value" id="contribCount">0</div><div class="card-sub">Team members</div></div>
-      <div class="card"><div class="card-label">Payments Sent</div><div class="card-value" id="payCount">0</div><div class="card-sub">This session</div></div>
+      <div class="card"><div class="card-label">Contributors</div><div class="card-value" id="contribCount">0</div><div class="card-sub" id="contribSub">Team members</div></div>
+      <div class="card"><div class="card-label">Total Payments</div><div class="card-value" id="payCount">0</div><div class="card-sub">All time</div></div>
     </div>
     <div class="panel">
       <div class="panel-header">
-        <h3>Your Team</h3>
-        <button class="add-btn" onclick="openAdd()">+ Add Contributor</button>
+        <h3 id="teamTitle">Your Team</h3>
+        <div class="panel-actions">
+          <button class="icon-btn" onclick="openTeamSwitcher()">🏢 Teams</button>
+          <button class="add-btn" onclick="openAdd()">+ Add Contributor</button>
+        </div>
       </div>
-      <div id="contribList"><div style="color:#4b5563;font-size:14px;padding:16px 0;text-align:center">No contributors yet — add your first team member above.</div></div>
+      <div id="contribList"><div class="empty-state">No contributors yet — add your first team member above.</div></div>
     </div>
-    <div class="panel" id="actPanel" style="display:none">
-      <h3 style="margin-bottom:16px">Payment Activity</h3>
-      <div id="actList"></div>
+    <div class="panel">
+      <div class="panel-header">
+        <h3>Payment Activity</h3>
+        <div class="panel-actions">
+          <button class="icon-btn" onclick="refreshActivity()">↻ Refresh</button>
+          <button class="icon-btn" onclick="clearActivity()">Clear</button>
+        </div>
+      </div>
+      <div id="actList"><div class="empty-state">No payments yet.</div></div>
+    </div>
+  </div>
+
+  <!-- Team Switcher Modal -->
+  <div class="modal" id="teamModal">
+    <div class="modal-box">
+      <h3>Teams / Projects</h3>
+      <p>Manage multiple teams or projects. Each team has its own contributors and payment history.</p>
+      <div id="teamList" style="margin-bottom:16px"></div>
+      <div class="field"><label>New Team Name</label><input id="newTeamName" placeholder="e.g. DeFi Protocol, Gaming Studio"></div>
+      <div class="modal-btns">
+        <button class="modal-cancel" onclick="closeModal('teamModal')">Done</button>
+        <button class="modal-submit" onclick="createTeam()">Create Team</button>
+      </div>
     </div>
   </div>
 
   <!-- Add Contributor Modal -->
   <div class="modal" id="addModal">
     <div class="modal-box">
-      <h3>Add Contributor</h3>
-      <p>Add a team member by their Solana wallet address to send them USDC payments.</p>
+      <h3 id="addModalTitle">Add Contributor</h3>
+      <p id="addModalDesc">Add a team member by their Solana wallet address to send them USDC payments.</p>
+      <input type="hidden" id="editIndex" value="-1">
       <div class="field"><label>Name</label><input id="c_name" placeholder="e.g. Alice Dev"></div>
       <div class="field"><label>Solana Wallet Address</label><input id="c_wallet" placeholder="Paste wallet address..." style="font-family:monospace;font-size:12px"></div>
-      <div class="field" style="display:flex;gap:8px"><div style="flex:2"><label>Rate (USDC)</label><input id="c_rate" type="number" placeholder="e.g. 500"></div><div style="flex:1"><label>Per</label><select id="c_period" style="width:100%;background:#111;border:1px solid #1f2937;color:#fff;padding:12px 16px;border-radius:8px;font-size:15px;outline:none"><option value="week">Week</option><option value="day">Day</option><option value="biweek">Biweekly</option><option value="month">Month</option></select></div></div>
+      <div class="field" style="display:flex;gap:8px">
+        <div style="flex:2"><label>Rate (USDC)</label><input id="c_rate" type="number" placeholder="e.g. 500"></div>
+        <div style="flex:1"><label>Per</label><select id="c_period"><option value="week">Week</option><option value="day">Day</option><option value="biweek">Biweekly</option><option value="month">Month</option></select></div>
+      </div>
+      <div class="field"><label>Role (Optional)</label><input id="c_role" placeholder="e.g. Developer, Designer, Community"></div>
+      <button class="modal-danger" id="deleteBtn" onclick="deleteContrib()" style="display:none">Remove from Team</button>
       <div class="modal-btns">
         <button class="modal-cancel" onclick="closeModal('addModal')">Cancel</button>
-        <button class="modal-submit" onclick="saveContrib()">Add to Team</button>
+        <button class="modal-submit" onclick="saveContrib()">Save</button>
       </div>
     </div>
   </div>
@@ -168,7 +229,7 @@
         <a id="payTxLink" href="#" target="_blank">View on Solscan</a>
       </div>
       <div class="modal-btns">
-        <button class="modal-cancel" onclick="closeModal('payModal')">Cancel</button>
+        <button class="modal-cancel" onclick="closeModal('payModal')">Close</button>
         <button class="modal-submit" id="payBtn" onclick="sendUSDC()">Sign &amp; Send USDC</button>
       </div>
     </div>
@@ -179,17 +240,35 @@
     <p style="margin-top:8px"><a href="https://twitter.com/whiteclawonsol">@whiteclawonsol</a> · $WCLAW</p>
   </footer>
   <div id="toast"></div>
+  <div id="debugPanel"></div>
 
 <script>
 const USDC_MINT='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const TOKEN_PROG='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
-const ASSOC_PROG='ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1gdH';
 const MEMO_PROG='MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
 const RPC='https://mainnet.helius-rpc.com/?api-key=6d5df401-940b-40c6-a3ee-303b177b37a1';
-let pk=null, contribs=JSON.parse(localStorage.getItem('pc_c')||'[]'), payments=JSON.parse(localStorage.getItem('pc_p')||'[]'), pCount=payments.length;
+
+// Multi-team state
+let pk=null;
+let teams=JSON.parse(localStorage.getItem('pc_teams')||'null');
+if(!teams){teams=[{id:'main',name:'Main Team',contribs:[],payments:[]}];localStorage.setItem('pc_teams',JSON.stringify(teams));}
+let activeTeamId=localStorage.getItem('pc_active')||teams[0].id;
+
+function getActiveTeam(){return teams.find(t=>t.id===activeTeamId)||teams[0];}
+function saveTeams(){localStorage.setItem('pc_teams',JSON.stringify(teams));localStorage.setItem('pc_active',activeTeamId);}
+function dbg(msg,level){
+  const p=document.getElementById('debugPanel');
+  const d=document.createElement('div');
+  d.className='log '+(level||'');
+  d.textContent=new Date().toLocaleTimeString()+' | '+msg;
+  p.appendChild(d);
+  p.scrollTop=p.scrollHeight;
+  console.log('[paycheck]',msg);
+}
 
 function toast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className=e?'show error':'show';clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),4500)}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
+function toggleDebug(){const p=document.getElementById('debugPanel');p.classList.toggle('show');}
 
 async function connectWallet(){
   const p=window.phantom?.solana||window.solana;
@@ -204,57 +283,139 @@ function onConn(){
   document.getElementById('walletAddress').textContent=pk;
   document.getElementById('heroSection').style.display='none';
   document.getElementById('dashboard').classList.add('visible');
-  toast('Wallet connected');fetchBal();renderC();renderPayments();
+  document.getElementById('teamSwitcher').style.display='flex';
+  dbg('Wallet connected: '+s,'ok');
+  toast('Wallet connected');
+  fetchBalances();renderAll();
 }
 
-async function fetchBal(){
+async function fetchBalances(){
   const conn=new solanaWeb3.Connection(RPC,'confirmed');
   const p2=new solanaWeb3.PublicKey(pk);
-  try{const l=await conn.getBalance(p2);document.getElementById('solBalance').textContent=(l/1e9).toFixed(4)+' SOL'}catch(e){}
+  try{const l=await conn.getBalance(p2);document.getElementById('solBalance').textContent=(l/1e9).toFixed(4)+' SOL';dbg('SOL: '+(l/1e9).toFixed(4));}catch(e){dbg('SOL fetch error: '+e.message,'err');}
   try{
     const m=new solanaWeb3.PublicKey(USDC_MINT);
     const r=await conn.getParsedTokenAccountsByOwner(p2,{mint:m});
     const b=r.value.length>0?r.value[0].account.data.parsed.info.tokenAmount.uiAmount:0;
     document.getElementById('usdcBalance').textContent=(b||0).toFixed(2)+' USDC';
-  }catch(e){}
+    dbg('USDC: '+(b||0).toFixed(2));
+  }catch(e){dbg('USDC fetch error: '+e.message,'err');}
+}
+
+function renderAll(){
+  const team=getActiveTeam();
+  document.getElementById('teamName').textContent=team.name;
+  document.getElementById('teamTitle').textContent=team.name+' — Members';
+  renderC();renderPayments();
 }
 
 function renderC(){
-  document.getElementById('contribCount').textContent=contribs.length;
+  const team=getActiveTeam();
+  document.getElementById('contribCount').textContent=team.contribs.length;
+  document.getElementById('contribSub').textContent=team.contribs.length===1?'team member':'team members';
   const l=document.getElementById('contribList');
-  if(!contribs.length){l.innerHTML='<div style="color:#4b5563;font-size:14px;padding:16px 0;text-align:center">No contributors yet — add your first team member above.</div>';return}
-  l.innerHTML=contribs.map((c,i)=>`
+  if(!team.contribs.length){l.innerHTML='<div class="empty-state">No contributors in this team yet.</div>';return}
+  l.innerHTML=team.contribs.map((c,i)=>`
     <div class="contributor-row">
-      <div class="contrib-info">
-        <div class="contrib-avatar">${c.n.charAt(0).toUpperCase()}</div>
-        <div><div class="contrib-name">${c.n}</div><div class="contrib-wallet">${c.w.slice(0,8)}...${c.w.slice(-6)}</div></div>
+      <div class="contrib-info" onclick="openEdit(${i})">
+        <div class="contrib-avatar">${(c.n||'?').charAt(0).toUpperCase()}</div>
+        <div>
+          <div class="contrib-name">${c.n}${c.role?' <span style="color:#6b7280;font-weight:400;font-size:12px">• '+c.role+'</span>':''}</div>
+          <div class="contrib-wallet">${c.w.slice(0,8)}...${c.w.slice(-6)}</div>
+        </div>
       </div>
       <div class="contrib-actions">
         ${c.r?`<div class="contrib-rate">${Number(c.r).toLocaleString()} USDC/${c.p==='day'?'day':c.p==='week'?'wk':c.p==='biweek'?'2wk':'mo'}</div>`:''}
+        <button class="edit-btn" onclick="openEdit(${i})" title="Edit">✎</button>
         <button class="pay-btn" onclick="openPay(${i})">Send USDC</button>
       </div>
     </div>`).join('');
 }
 
 function renderPayments(){
-  if(!payments.length)return;
-  document.getElementById('payCount').textContent=payments.length;
-  document.getElementById('actPanel').style.display='block';
-  const list=document.getElementById('actList');
-  list.innerHTML='';
-  payments.forEach(function(p){
-    const row=document.createElement('div');
-    row.className='activity-item';
+  const team=getActiveTeam();
+  document.getElementById('payCount').textContent=team.payments.length;
+  const l=document.getElementById('actList');
+  if(!team.payments.length){l.innerHTML='<div class="empty-state">No payments yet. Send your first USDC payment above.</div>';return}
+  l.innerHTML=team.payments.map(p=>{
     const ts=new Date(p.ts).toLocaleString();
-    row.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div><span style="color:#6ee7b7;font-weight:600">'+p.amount+' USDC</span> <span style="color:#d1d5db">to '+p.name+'</span>'+(p.note?' <span style="color:#6b7280;font-size:11px">• '+p.note+'</span>':'')+'</div><a href="https://solscan.io/tx/'+p.sig+'" target="_blank" style="color:#34d399;font-size:11px;font-family:monospace;text-decoration:none">'+p.sig.slice(0,8)+'... ↗</a></div><div style="color:#4b5563;font-size:11px;margin-top:4px">'+ts+'</div>';
-    list.appendChild(row);
-  });
+    return `<div class="activity-item">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><span style="color:#6ee7b7;font-weight:600">${p.amount} USDC</span> <span style="color:#d1d5db">to ${p.name}</span>${p.note?' <span style="color:#6b7280;font-size:11px">• '+p.note+'</span>':''}</div>
+        <a href="https://solscan.io/tx/${p.sig}" target="_blank" style="color:#34d399;font-size:11px;font-family:monospace;text-decoration:none">${p.sig.slice(0,8)}... ↗</a>
+      </div>
+      <div style="color:#4b5563;font-size:11px;margin-top:4px">${ts}</div>
+    </div>`;
+  }).join('');
 }
 
+function refreshActivity(){renderPayments();toast('Activity refreshed');}
+function clearActivity(){
+  if(!confirm('Clear all payment history for this team? This cannot be undone.'))return;
+  const team=getActiveTeam();team.payments=[];saveTeams();renderPayments();toast('Activity cleared');
+}
+
+// Team management
+function openTeamSwitcher(){
+  const l=document.getElementById('teamList');
+  l.innerHTML=teams.map(t=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border:1px solid ${t.id===activeTeamId?'#065f46':'#1f2937'};border-radius:8px;margin-bottom:8px;cursor:pointer" onclick="switchTeam('${t.id}')">
+      <div>
+        <div style="font-weight:600;font-size:14px">${t.name}${t.id===activeTeamId?' <span style="color:#6ee7b7;font-size:11px">• ACTIVE</span>':''}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px">${t.contribs.length} members · ${t.payments.length} payments</div>
+      </div>
+      ${teams.length>1?`<button class="edit-btn" onclick="event.stopPropagation();deleteTeam('${t.id}')" style="color:#fca5a5">Delete</button>`:''}
+    </div>`).join('');
+  document.getElementById('teamModal').classList.add('open');
+}
+
+function switchTeam(id){
+  activeTeamId=id;saveTeams();renderAll();closeModal('teamModal');toast('Switched to '+getActiveTeam().name);
+}
+
+function createTeam(){
+  const name=document.getElementById('newTeamName').value.trim();
+  if(!name){toast('Enter a team name',1);return}
+  const id='team_'+Date.now();
+  teams.push({id,name,contribs:[],payments:[]});
+  activeTeamId=id;saveTeams();renderAll();closeModal('teamModal');
+  document.getElementById('newTeamName').value='';
+  toast('Created '+name);
+}
+
+function deleteTeam(id){
+  if(teams.length<=1){toast('Cannot delete last team',1);return}
+  if(!confirm('Delete this team? All members and payment history will be lost.'))return;
+  teams=teams.filter(t=>t.id!==id);
+  if(activeTeamId===id)activeTeamId=teams[0].id;
+  saveTeams();renderAll();openTeamSwitcher();toast('Team deleted');
+}
+
+// Contributor management
 function openAdd(){
+  document.getElementById('addModalTitle').textContent='Add Contributor';
+  document.getElementById('addModalDesc').textContent='Add a team member by their Solana wallet address.';
+  document.getElementById('editIndex').value='-1';
   document.getElementById('c_name').value='';
   document.getElementById('c_wallet').value='';
   document.getElementById('c_rate').value='';
+  document.getElementById('c_period').value='week';
+  document.getElementById('c_role').value='';
+  document.getElementById('deleteBtn').style.display='none';
+  document.getElementById('addModal').classList.add('open');
+}
+
+function openEdit(i){
+  const c=getActiveTeam().contribs[i];
+  document.getElementById('addModalTitle').textContent='Edit Contributor';
+  document.getElementById('addModalDesc').textContent='Update '+c.n+' details or remove them from the team.';
+  document.getElementById('editIndex').value=i;
+  document.getElementById('c_name').value=c.n;
+  document.getElementById('c_wallet').value=c.w;
+  document.getElementById('c_rate').value=c.r||'';
+  document.getElementById('c_period').value=c.p||'week';
+  document.getElementById('c_role').value=c.role||'';
+  document.getElementById('deleteBtn').style.display='block';
   document.getElementById('addModal').classList.add('open');
 }
 
@@ -262,42 +423,39 @@ function saveContrib(){
   const n=document.getElementById('c_name').value.trim();
   const w=document.getElementById('c_wallet').value.trim();
   const r=document.getElementById('c_rate').value;
-  const p=document.getElementById('c_period')?document.getElementById('c_period').value:'month';
+  const p=document.getElementById('c_period').value;
+  const role=document.getElementById('c_role').value.trim();
+  const idx=parseInt(document.getElementById('editIndex').value);
   if(!n){toast('Enter a name',1);return}
   if(!w||w.length<32){toast('Enter a valid wallet address',1);return}
   try{new solanaWeb3.PublicKey(w)}catch(e){toast('Invalid wallet address',1);return}
-  contribs.push({n,w,r,p});
-  localStorage.setItem('pc_c',JSON.stringify(contribs));
-  closeModal('addModal');renderC();toast(n+' added');
+  const team=getActiveTeam();
+  const entry={n,w,r,p,role};
+  if(idx>=0){team.contribs[idx]=entry;toast(n+' updated');}
+  else{team.contribs.push(entry);toast(n+' added');}
+  saveTeams();closeModal('addModal');renderC();
+}
+
+function deleteContrib(){
+  const idx=parseInt(document.getElementById('editIndex').value);
+  if(idx<0)return;
+  const team=getActiveTeam();
+  const name=team.contribs[idx].n;
+  if(!confirm('Remove '+name+' from the team?'))return;
+  team.contribs.splice(idx,1);saveTeams();closeModal('addModal');renderC();toast(name+' removed');
 }
 
 function openPay(i){
-  const c=contribs[i];
+  const c=getActiveTeam().contribs[i];
   document.getElementById('p_name').value=c.n;
   document.getElementById('p_wallet').value=c.w;
-  // Suggest payment based on rate and period
   let suggested='';
-  if(c.r){
-    const rate=Number(c.r);
-    const period=c.p||'month';
-    if(period==='day')suggested=rate.toFixed(2);
-    else if(period==='week')suggested=rate.toFixed(2);
-    else if(period==='biweek')suggested=rate.toFixed(2);
-    else suggested=(rate/4).toFixed(2); // monthly - pay weekly chunk
-  }
+  if(c.r){const rate=Number(c.r);suggested=c.p==='month'?(rate/4).toFixed(2):rate.toFixed(2);}
   document.getElementById('p_amount').value=suggested;
   document.getElementById('p_note').value='';
   document.getElementById('payTx').classList.remove('show');
   const btn=document.getElementById('payBtn');btn.disabled=false;btn.textContent='Sign & Send USDC';
   document.getElementById('payModal').classList.add('open');
-}
-
-async function getATA(wallet,mint){
-  const [ata]=await solanaWeb3.PublicKey.findProgramAddress(
-    [new solanaWeb3.PublicKey(wallet).toBuffer(),new solanaWeb3.PublicKey(TOKEN_PROG).toBuffer(),new solanaWeb3.PublicKey(mint).toBuffer()],
-    new solanaWeb3.PublicKey(ASSOC_PROG)
-  );
-  return ata;
 }
 
 async function sendUSDC(){
@@ -308,6 +466,7 @@ async function sendUSDC(){
   if(!amount||amount<=0){toast('Enter a valid amount',1);return}
   const btn=document.getElementById('payBtn');
   btn.disabled=true;btn.textContent='Checking accounts...';
+  dbg('Sending '+amount+' USDC to '+name);
   try{
     const prov=window.phantom?.solana||window.solana;
     const conn=new solanaWeb3.Connection(RPC,'confirmed');
@@ -317,23 +476,16 @@ async function sendUSDC(){
     const tokenProgPk=new solanaWeb3.PublicKey(TOKEN_PROG);
     const memoPk=new solanaWeb3.PublicKey(MEMO_PROG);
 
-    // Get sender actual USDC token account
     const senderAccounts=await conn.getParsedTokenAccountsByOwner(senderPk,{mint:mintPk});
-    if(!senderAccounts.value.length){
-      toast('You do not have a USDC token account',1);
-      btn.disabled=false;btn.textContent='Sign & Send USDC';return;
-    }
+    if(!senderAccounts.value.length){toast('You do not have a USDC account',1);btn.disabled=false;btn.textContent='Sign & Send USDC';dbg('No sender USDC account','err');return;}
     const senderATA=new solanaWeb3.PublicKey(senderAccounts.value[0].pubkey.toString());
+    dbg('Sender ATA: '+senderATA.toString().slice(0,8));
 
-    // Get recipient actual USDC token account
     const recipAccounts=await conn.getParsedTokenAccountsByOwner(recipPk,{mint:mintPk});
-    if(!recipAccounts.value.length){
-      toast('Recipient does not have a USDC account. They need to hold USDC first.',1);
-      btn.disabled=false;btn.textContent='Sign & Send USDC';return;
-    }
+    if(!recipAccounts.value.length){toast('Recipient has no USDC account. They must hold USDC first.',1);btn.disabled=false;btn.textContent='Sign & Send USDC';dbg('No recipient USDC account','err');return;}
     const recipATA=new solanaWeb3.PublicKey(recipAccounts.value[0].pubkey.toString());
+    dbg('Recipient ATA: '+recipATA.toString().slice(0,8));
 
-    // Build SPL transfer instruction
     const amountRaw=BigInt(Math.round(amount*1e6));
     const transferData=new Uint8Array(9);
     transferData[0]=3;
@@ -342,11 +494,7 @@ async function sendUSDC(){
 
     const tx=new solanaWeb3.Transaction();
     tx.add(new solanaWeb3.TransactionInstruction({
-      keys:[
-        {pubkey:senderATA,isSigner:false,isWritable:true},
-        {pubkey:recipATA,isSigner:false,isWritable:true},
-        {pubkey:senderPk,isSigner:true,isWritable:false},
-      ],
+      keys:[{pubkey:senderATA,isSigner:false,isWritable:true},{pubkey:recipATA,isSigner:false,isWritable:true},{pubkey:senderPk,isSigner:true,isWritable:false}],
       programId:tokenProgPk,
       data:transferData
     }));
@@ -359,45 +507,34 @@ async function sendUSDC(){
     const {blockhash}=await conn.getLatestBlockhash();
     tx.recentBlockhash=blockhash;tx.feePayer=senderPk;
     btn.textContent='Waiting for signature...';
+    dbg('Requesting signature');
     const {signature}=await prov.signAndSendTransaction(tx);
+    dbg('Signed: '+signature.slice(0,16),'ok');
 
     document.getElementById('payTxLink').href='https://solscan.io/tx/'+signature;
     document.getElementById('payTxLink').textContent=signature.slice(0,20)+'... View on Solscan';
     document.getElementById('payTx').classList.add('show');
     btn.textContent='Sent!';
-    document.getElementById('payCount').textContent=payments.length+1;
-    document.getElementById('actPanel').style.display='block';
-    const row=document.createElement('div');
-    row.className='activity-item';
-    row.innerHTML='<div style="display:flex;justify-content:space-between"><div><span style="color:#6ee7b7;font-weight:600">'+amount+' USDC</span> <span style="color:#d1d5db">to '+name+'</span>'+(note?' <span style="color:#6b7280;font-size:11px">• '+note+'</span>':'')+'</div><a href="https://solscan.io/tx/'+signature+'" target="_blank" style="color:#34d399;font-size:11px;font-family:monospace;text-decoration:none">'+signature.slice(0,8)+'... ↗</a></div><div style="color:#4b5563;font-size:11px;margin-top:4px">'+new Date().toLocaleTimeString()+'</div>';
-    document.getElementById('actList').prepend(row);
-    // Persist to localStorage
-    payments.unshift({amount:amount,name:name,note:note,sig:signature,ts:Date.now()});
-    localStorage.setItem('pc_p',JSON.stringify(payments.slice(0,50)));
-    toast('Sent '+amount+' USDC to '+name);fetchBal();
+
+    const team=getActiveTeam();
+    team.payments.unshift({amount,name,note,sig:signature,ts:Date.now()});
+    saveTeams();renderPayments();
+
+    toast('Sent '+amount+' USDC to '+name);fetchBalances();
     setTimeout(function(){closeModal('payModal');},2500);
   }catch(e){
     btn.disabled=false;btn.textContent='Sign & Send USDC';
     const m=e.message||'';
+    dbg('Send failed: '+m,'err');
     if(m.includes('rejected')||m.includes('User'))toast('Cancelled',1);
-    else{toast('Error: '+m.slice(0,100),1);console.error('USDC error:',e);}
+    else{toast('Error: '+m.slice(0,100),1);console.error(e);}
   }
 }
 
-
-
 window.addEventListener('load',async()=>{
-  // Seed example contributor if storage is empty
-  if(contribs.length===0){
-    contribs=[{n:'Example Contributor',w:'F36xnoonUg9rojAyie4WDVSeDCPjwraM1W9vRZgpMzwY',r:'2000'}];
-    localStorage.setItem('pc_c',JSON.stringify(contribs));
-  }
   const p=window.phantom?.solana||window.solana;
-  if(p?.isPhantom&&p.isConnected){
-    try{const r=await p.connect({onlyIfTrusted:true});pk=r.publicKey.toString();onConn()}catch(e){}
-  }
+  if(p?.isPhantom&&p.isConnected){try{const r=await p.connect({onlyIfTrusted:true});pk=r.publicKey.toString();onConn()}catch(e){}}
 });
 </script>
 </body>
 </html>
-/* redeployed Sun Apr 19 16:13:57 CDT 2026 */
