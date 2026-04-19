@@ -146,7 +146,7 @@
       <p>Add a team member by their Solana wallet address to send them USDC payments.</p>
       <div class="field"><label>Name</label><input id="c_name" placeholder="e.g. Alice Dev"></div>
       <div class="field"><label>Solana Wallet Address</label><input id="c_wallet" placeholder="Paste wallet address..." style="font-family:monospace;font-size:12px"></div>
-      <div class="field"><label>Monthly Rate (USDC)</label><input id="c_rate" type="number" placeholder="e.g. 2000"></div>
+      <div class="field" style="display:flex;gap:8px"><div style="flex:2"><label>Rate (USDC)</label><input id="c_rate" type="number" placeholder="e.g. 500"></div><div style="flex:1"><label>Per</label><select id="c_period" style="width:100%;background:#111;border:1px solid #1f2937;color:#fff;padding:12px 16px;border-radius:8px;font-size:15px;outline:none"><option value="week">Week</option><option value="day">Day</option><option value="biweek">Biweekly</option><option value="month">Month</option></select></div></div>
       <div class="modal-btns">
         <button class="modal-cancel" onclick="closeModal('addModal')">Cancel</button>
         <button class="modal-submit" onclick="saveContrib()">Add to Team</button>
@@ -230,7 +230,7 @@ function renderC(){
         <div><div class="contrib-name">${c.n}</div><div class="contrib-wallet">${c.w.slice(0,8)}...${c.w.slice(-6)}</div></div>
       </div>
       <div class="contrib-actions">
-        ${c.r?`<div class="contrib-rate">${Number(c.r).toLocaleString()} USDC/mo</div>`:''}
+        ${c.r?`<div class="contrib-rate">${Number(c.r).toLocaleString()} USDC/${c.p==='day'?'day':c.p==='week'?'wk':c.p==='biweek'?'2wk':'mo'}</div>`:''}
         <button class="pay-btn" onclick="openPay(${i})">Send USDC</button>
       </div>
     </div>`).join('');
@@ -247,10 +247,11 @@ function saveContrib(){
   const n=document.getElementById('c_name').value.trim();
   const w=document.getElementById('c_wallet').value.trim();
   const r=document.getElementById('c_rate').value;
+  const p=document.getElementById('c_period')?document.getElementById('c_period').value:'month';
   if(!n){toast('Enter a name',1);return}
   if(!w||w.length<32){toast('Enter a valid wallet address',1);return}
   try{new solanaWeb3.PublicKey(w)}catch(e){toast('Invalid wallet address',1);return}
-  contribs.push({n,w,r});
+  contribs.push({n,w,r,p});
   localStorage.setItem('pc_c',JSON.stringify(contribs));
   closeModal('addModal');renderC();toast(n+' added');
 }
@@ -259,7 +260,17 @@ function openPay(i){
   const c=contribs[i];
   document.getElementById('p_name').value=c.n;
   document.getElementById('p_wallet').value=c.w;
-  document.getElementById('p_amount').value=c.r?(Number(c.r)/4).toFixed(2):'';
+  // Suggest payment based on rate and period
+  let suggested='';
+  if(c.r){
+    const rate=Number(c.r);
+    const period=c.p||'month';
+    if(period==='day')suggested=rate.toFixed(2);
+    else if(period==='week')suggested=rate.toFixed(2);
+    else if(period==='biweek')suggested=rate.toFixed(2);
+    else suggested=(rate/4).toFixed(2); // monthly - pay weekly chunk
+  }
+  document.getElementById('p_amount').value=suggested;
   document.getElementById('p_note').value='';
   document.getElementById('payTx').classList.remove('show');
   const btn=document.getElementById('payBtn');btn.disabled=false;btn.textContent='Sign & Send USDC';
@@ -343,7 +354,7 @@ async function sendUSDC(){
     document.getElementById('actPanel').style.display='block';
     const row=document.createElement('div');
     row.className='activity-item';
-    row.innerHTML='<div style="display:flex;justify-content:space-between"><div><span style="color:#6ee7b7;font-weight:600">'+amount+' USDC</span> to '+name+'</div><a href="https://solscan.io/tx/'+signature+'" target="_blank" style="color:#34d399;font-size:11px;font-family:monospace;text-decoration:none">'+signature.slice(0,8)+'... ↗</a></div><div style="color:#4b5563;font-size:11px;margin-top:4px">'+new Date().toLocaleTimeString()+'</div>';
+    row.innerHTML='<div style="display:flex;justify-content:space-between"><div><span style="color:#6ee7b7;font-weight:600">'+amount+' USDC</span> <span style="color:#d1d5db">to '+name+'</span>'+(note?' <span style="color:#6b7280;font-size:11px">• '+note+'</span>':'')+'</div><a href="https://solscan.io/tx/'+signature+'" target="_blank" style="color:#34d399;font-size:11px;font-family:monospace;text-decoration:none">'+signature.slice(0,8)+'... ↗</a></div><div style="color:#4b5563;font-size:11px;margin-top:4px">'+new Date().toLocaleTimeString()+'</div>';
     document.getElementById('actList').prepend(row);
     toast('Sent '+amount+' USDC to '+name);fetchBal();
     setTimeout(function(){closeModal('payModal');},2500);
