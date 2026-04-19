@@ -158,11 +158,29 @@
       <div class="card"><div class="card-label">Contributors</div><div class="card-value" id="contribCount">0</div><div class="card-sub" id="contribSub">Team members</div></div>
       <div class="card"><div class="card-label">Total Payments</div><div class="card-value" id="payCount">0</div><div class="card-sub">All time</div></div>
     </div>
+
+    <!-- Analytics Panel -->
+    <div class="panel" id="analyticsPanel">
+      <div class="panel-header">
+        <h3>Analytics</h3>
+        <div class="panel-actions">
+          <button class="icon-btn" onclick="exportPayments()">⇣ Export Payments</button>
+          <button class="icon-btn" onclick="exportContribs()">⇣ Export Team</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px">
+        <div><div class="card-label">Paid This Month</div><div style="font-size:22px;font-weight:700;color:#6ee7b7" id="statMonth">0 USDC</div></div>
+        <div><div class="card-label">Paid All Time</div><div style="font-size:22px;font-weight:700" id="statAll">0 USDC</div></div>
+        <div><div class="card-label">Avg Payment</div><div style="font-size:22px;font-weight:700" id="statAvg">—</div></div>
+        <div><div class="card-label">Top Recipient</div><div style="font-size:16px;font-weight:600;color:#d1d5db" id="statTop">—</div></div>
+      </div>
+    </div>
     <div class="panel">
       <div class="panel-header">
         <h3 id="teamTitle">Your Team</h3>
         <div class="panel-actions">
           <button class="icon-btn" onclick="openTeamSwitcher()">🏢 Teams</button>
+          <button class="icon-btn" style="background:#065f46;color:#6ee7b7;border-color:#065f46" onclick="openBatchPay()">⚡ Run Payroll</button>
           <button class="add-btn" onclick="openAdd()">+ Add Contributor</button>
         </div>
       </div>
@@ -211,6 +229,30 @@
       <div class="modal-btns">
         <button class="modal-cancel" onclick="closeModal('addModal')">Cancel</button>
         <button class="modal-submit" onclick="saveContrib()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Batch Payroll Modal -->
+  <div class="modal" id="batchModal">
+    <div class="modal-box" style="max-width:560px">
+      <h3>⚡ Run Payroll</h3>
+      <p>Pay multiple contributors in sequence. Each payment requires a signature from Phantom.</p>
+      <div id="batchList" style="margin-bottom:20px;max-height:380px;overflow-y:auto"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid #1f2937;margin-top:12px">
+        <div>
+          <div style="font-size:12px;color:#9ca3af">TOTAL</div>
+          <div style="font-size:20px;font-weight:700;color:#6ee7b7" id="batchTotal">0 USDC</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;color:#9ca3af">SELECTED</div>
+          <div style="font-size:20px;font-weight:700" id="batchCount">0</div>
+        </div>
+      </div>
+      <div id="batchProgress" style="display:none;padding:12px;background:#0a2818;border:1px solid #065f46;border-radius:8px;margin:12px 0;font-size:13px;color:#6ee7b7"></div>
+      <div class="modal-btns">
+        <button class="modal-cancel" onclick="closeModal('batchModal')">Cancel</button>
+        <button class="modal-submit" id="batchRunBtn" onclick="runBatchPay()">Start Payroll Run</button>
       </div>
     </div>
   </div>
@@ -306,7 +348,7 @@ function renderAll(){
   const team=getActiveTeam();
   document.getElementById('teamName').textContent=team.name;
   document.getElementById('teamTitle').textContent=team.name+' — Members';
-  renderC();renderPayments();
+  renderC();renderPayments();updateAnalytics();
 }
 
 function renderC(){
@@ -335,6 +377,7 @@ function renderC(){
 function renderPayments(){
   const team=getActiveTeam();
   document.getElementById('payCount').textContent=team.payments.length;
+  updateAnalytics();
   const l=document.getElementById('actList');
   if(!team.payments.length){l.innerHTML='<div class="empty-state">No payments yet. Send your first USDC payment above.</div>';return}
   l.innerHTML=team.payments.map(p=>{
@@ -350,6 +393,183 @@ function renderPayments(){
 }
 
 function refreshActivity(){renderPayments();toast('Activity refreshed');}
+
+// Analytics
+function updateAnalytics(){
+  const team=getActiveTeam();
+  const p=team.payments;
+  const allTotal=p.reduce((s,x)=>s+Number(x.amount||0),0);
+  const now=new Date();
+  const monthStart=new Date(now.getFullYear(),now.getMonth(),1).getTime();
+  const monthTotal=p.filter(x=>x.ts>=monthStart).reduce((s,x)=>s+Number(x.amount||0),0);
+  const avg=p.length?(allTotal/p.length):0;
+  // Top recipient by total paid
+  const byName={};
+  p.forEach(x=>{byName[x.name]=(byName[x.name]||0)+Number(x.amount||0);});
+  const top=Object.entries(byName).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('statMonth').textContent=monthTotal.toFixed(2)+' USDC';
+  document.getElementById('statAll').textContent=allTotal.toFixed(2)+' USDC';
+  document.getElementById('statAvg').textContent=p.length?avg.toFixed(2)+' USDC':'—';
+  document.getElementById('statTop').textContent=top?(top[0]+' ('+top[1].toFixed(2)+')'):'—';
+}
+
+// CSV Export
+function downloadCSV(filename,rows){
+  const csv=rows.map(r=>r.map(c=>{
+    const s=(c===null||c===undefined)?'':String(c);
+    return '"'+s.replace(/"/g,'""')+'"';
+  }).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function exportPayments(){
+  const team=getActiveTeam();
+  if(!team.payments.length){toast('No payments to export',1);return}
+  const rows=[['Date','Amount (USDC)','Recipient','Note','Signature','Solscan URL']];
+  team.payments.forEach(p=>{
+    rows.push([new Date(p.ts).toISOString(),p.amount,p.name,p.note||'',p.sig,'https://solscan.io/tx/'+p.sig]);
+  });
+  downloadCSV('paycheck-'+team.name.replace(/[^a-z0-9]/gi,'_').toLowerCase()+'-payments.csv',rows);
+  toast('Payment history exported');
+}
+
+function exportContribs(){
+  const team=getActiveTeam();
+  if(!team.contribs.length){toast('No contributors to export',1);return}
+  const rows=[['Name','Wallet','Role','Rate (USDC)','Period']];
+  team.contribs.forEach(c=>{
+    rows.push([c.n,c.w,c.role||'',c.r||'',c.p||'month']);
+  });
+  downloadCSV('paycheck-'+team.name.replace(/[^a-z0-9]/gi,'_').toLowerCase()+'-team.csv',rows);
+  toast('Team list exported');
+}
+
+// Batch Payroll
+let batchSelections={};
+function openBatchPay(){
+  const team=getActiveTeam();
+  if(!team.contribs.length){toast('Add contributors first',1);return}
+  const list=document.getElementById('batchList');
+  batchSelections={};
+  list.innerHTML=team.contribs.map((c,i)=>{
+    let defaultAmount='';
+    if(c.r){const rate=Number(c.r);defaultAmount=c.p==='month'?(rate/4).toFixed(2):rate.toFixed(2);}
+    batchSelections[i]={selected:!!c.r,amount:defaultAmount};
+    return `<div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #1f2937;border-radius:8px;margin-bottom:8px">
+      <input type="checkbox" ${c.r?'checked':''} onchange="toggleBatch(${i},this.checked)" style="width:18px;height:18px;accent-color:#6ee7b7;cursor:pointer">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px">${c.n}${c.role?' <span style="color:#6b7280;font-weight:400;font-size:11px">• '+c.role+'</span>':''}</div>
+        <div style="font-size:11px;color:#6b7280;font-family:monospace;margin-top:2px">${c.w.slice(0,8)}...${c.w.slice(-6)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <input type="number" value="${defaultAmount}" onchange="updateBatchAmount(${i},this.value)" placeholder="0.00" style="width:90px;background:#111;border:1px solid #1f2937;color:#fff;padding:8px 10px;border-radius:6px;font-size:13px;text-align:right">
+        <span style="font-size:11px;color:#6b7280">USDC</span>
+      </div>
+    </div>`;
+  }).join('');
+  updateBatchSummary();
+  document.getElementById('batchProgress').style.display='none';
+  const btn=document.getElementById('batchRunBtn');btn.disabled=false;btn.textContent='Start Payroll Run';
+  document.getElementById('batchModal').classList.add('open');
+}
+
+function toggleBatch(i,checked){batchSelections[i].selected=checked;updateBatchSummary();}
+function updateBatchAmount(i,val){batchSelections[i].amount=val;updateBatchSummary();}
+
+function updateBatchSummary(){
+  let total=0,count=0;
+  Object.values(batchSelections).forEach(s=>{if(s.selected&&s.amount){total+=Number(s.amount);count++;}});
+  document.getElementById('batchTotal').textContent=total.toFixed(2)+' USDC';
+  document.getElementById('batchCount').textContent=count;
+}
+
+async function runBatchPay(){
+  const team=getActiveTeam();
+  const toPay=[];
+  Object.entries(batchSelections).forEach(([i,s])=>{
+    if(s.selected&&s.amount&&Number(s.amount)>0){
+      const c=team.contribs[Number(i)];
+      toPay.push({c:c,amount:Number(s.amount)});
+    }
+  });
+  if(!toPay.length){toast('Select at least one contributor with an amount',1);return}
+
+  const btn=document.getElementById('batchRunBtn');
+  btn.disabled=true;
+  const progress=document.getElementById('batchProgress');
+  progress.style.display='block';
+
+  let successCount=0;
+  for(let idx=0;idx<toPay.length;idx++){
+    const {c,amount}=toPay[idx];
+    btn.textContent=`Paying ${idx+1}/${toPay.length}...`;
+    progress.textContent=`⏳ Paying ${c.n} (${amount} USDC) — ${idx+1} of ${toPay.length}`;
+    try{
+      const sig=await sendOneUSDC(c.w,c.n,amount,'Payroll run '+new Date().toLocaleDateString());
+      if(sig){
+        successCount++;
+        progress.innerHTML+=`<br>✓ ${c.n}: <a href="https://solscan.io/tx/${sig}" target="_blank" style="color:#34d399;text-decoration:none;font-family:monospace;font-size:11px">${sig.slice(0,8)}...</a>`;
+      }
+    }catch(e){
+      progress.innerHTML+=`<br>✗ ${c.n}: ${(e.message||'failed').slice(0,60)}`;
+      dbg('Batch pay failed for '+c.n+': '+e.message,'err');
+    }
+  }
+
+  btn.textContent=`Done — ${successCount}/${toPay.length} paid`;
+  toast(`Payroll run: ${successCount}/${toPay.length} successful`);
+  fetchBalances();renderPayments();updateAnalytics();
+}
+
+async function sendOneUSDC(recipient,name,amount,note){
+  const prov=window.phantom?.solana||window.solana;
+  const conn=new solanaWeb3.Connection(RPC,'confirmed');
+  const senderPk=new solanaWeb3.PublicKey(pk);
+  const recipPk=new solanaWeb3.PublicKey(recipient);
+  const mintPk=new solanaWeb3.PublicKey(USDC_MINT);
+  const tokenProgPk=new solanaWeb3.PublicKey(TOKEN_PROG);
+  const memoPk=new solanaWeb3.PublicKey(MEMO_PROG);
+
+  const senderAccounts=await conn.getParsedTokenAccountsByOwner(senderPk,{mint:mintPk});
+  if(!senderAccounts.value.length)throw new Error('No sender USDC account');
+  const senderATA=new solanaWeb3.PublicKey(senderAccounts.value[0].pubkey.toString());
+
+  const recipAccounts=await conn.getParsedTokenAccountsByOwner(recipPk,{mint:mintPk});
+  if(!recipAccounts.value.length)throw new Error('Recipient has no USDC account');
+  const recipATA=new solanaWeb3.PublicKey(recipAccounts.value[0].pubkey.toString());
+
+  const amountRaw=BigInt(Math.round(amount*1e6));
+  const transferData=new Uint8Array(9);
+  transferData[0]=3;
+  let amt=amountRaw;
+  for(let i=1;i<9;i++){transferData[i]=Number(amt&BigInt(0xff));amt>>=BigInt(8);}
+
+  const tx=new solanaWeb3.Transaction();
+  tx.add(new solanaWeb3.TransactionInstruction({
+    keys:[{pubkey:senderATA,isSigner:false,isWritable:true},{pubkey:recipATA,isSigner:false,isWritable:true},{pubkey:senderPk,isSigner:true,isWritable:false}],
+    programId:tokenProgPk,
+    data:transferData
+  }));
+  tx.add(new solanaWeb3.TransactionInstruction({
+    keys:[{pubkey:senderPk,isSigner:true,isWritable:false}],
+    programId:memoPk,
+    data:new TextEncoder().encode('paycheck:'+amount+':USDC:'+encodeURIComponent(note))
+  }));
+
+  const {blockhash}=await conn.getLatestBlockhash();
+  tx.recentBlockhash=blockhash;tx.feePayer=senderPk;
+  const {signature}=await prov.signAndSendTransaction(tx);
+
+  const team=getActiveTeam();
+  team.payments.unshift({amount,name,note,sig:signature,ts:Date.now()});
+  saveTeams();
+  return signature;
+}
+
 function clearActivity(){
   if(!confirm('Clear all payment history for this team? This cannot be undone.'))return;
   const team=getActiveTeam();team.payments=[];saveTeams();renderPayments();toast('Activity cleared');
