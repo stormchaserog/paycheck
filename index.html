@@ -153,6 +153,9 @@
         <div class="dash-wallet" id="walletAddress">—</div>
       </div>
       <div class="dash-header-right">
+        <button class="icon-btn" onclick="exportTeamData()" title="Download your team data as JSON">⇣ Export Data</button>
+        <button class="icon-btn" onclick="document.getElementById('importFile').click()" title="Restore team data from JSON">⇡ Import</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importTeamData(event)">
         <button class="icon-btn" onclick="toggleDebug()" title="Debug">⚙ Debug</button>
         <button class="icon-btn" onclick="fetchBalances()" title="Refresh">↻ Refresh</button>
       </div>
@@ -198,13 +201,17 @@
       <div class="panel-header">
         <h3>💸 Revenue Streams</h3>
         <div class="panel-actions">
+          <button class="icon-btn" id="activeWalletBtn" onclick="switchRevenueWallet()" title="Switch to a revenue wallet in Phantom" style="display:none">🔑 Sign as...</button>
           <button class="add-btn" onclick="openAddStream()">+ Connect Wallet</button>
         </div>
       </div>
       <div style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.5">
-        Connect protocol fee wallets (pump.fun creator, Meteora LP, Raydium fees, or any SOL/USDC earning wallet). Paycheck monitors incoming revenue and can route it to payroll, the advance pool, or contributor bonuses.
+        Connect revenue wallets (pump.fun creator, Meteora/Raydium LP owner, Jupiter referral, etc). Paycheck watches incoming revenue live. To <strong>claim</strong>, switch Phantom to that wallet and sign — your keys never leave your wallet.
       </div>
-      <div id="streamList"><div class="empty-state">No revenue streams connected yet. Add a protocol wallet to start routing onchain revenue to your team.</div></div>
+      <div id="activeWalletBanner" style="display:none;background:#0a2818;border:1px solid #065f46;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:13px;color:#6ee7b7">
+        ✓ Signing as <span id="activeWalletName" style="font-weight:600"></span> <span style="color:#9ca3af;font-family:monospace;font-size:11px" id="activeWalletAddr"></span>
+      </div>
+      <div id="streamList"><div class="empty-state">No revenue streams connected yet. Add a protocol wallet to start watching onchain revenue.</div></div>
     </div>
     <div class="panel">
       <div class="panel-header">
@@ -255,11 +262,11 @@
 
   <!-- Add Revenue Stream Modal -->
   <div class="modal" id="streamModal">
-    <div class="modal-box" style="max-width:500px">
-      <h3 id="streamModalTitle">Connect Revenue Stream</h3>
-      <p>Paste a Solana wallet address that receives protocol fees or rewards (pump.fun creator wallet, Meteora LP rewards, Raydium fees, or any earning wallet). We'll read the balance and show incoming revenue so you can route it.</p>
+    <div class="modal-box" style="max-width:520px">
+      <h3 id="streamModalTitle">Connect Revenue Wallet</h3>
+      <p>Connect a wallet that receives protocol revenue. Paycheck watches the balance and helps you route funds — but you always sign from the wallet that owns the revenue. <strong>Your private keys never leave Phantom.</strong></p>
       <input type="hidden" id="streamEditIndex" value="-1">
-      <div class="field"><label>Stream Name</label><input id="s_name" placeholder="e.g. Pump.fun creator fees"></div>
+      <div class="field"><label>Stream Name</label><input id="s_name" placeholder="e.g. Pump.fun creator wallet"></div>
       <div class="field">
         <label>Source Type</label>
         <select id="s_source">
@@ -273,12 +280,12 @@
       </div>
       <div class="field"><label>Solana Wallet Address</label><input id="s_wallet" placeholder="Paste wallet address..." style="font-family:monospace;font-size:12px"></div>
       <div class="field">
-        <label>Route Revenue To</label>
+        <label>Default Destination When Claiming</label>
         <select id="s_route">
-          <option value="treasury">Team Treasury (manual claim)</option>
+          <option value="treasury">Team Treasury (your main wallet)</option>
           <option value="payroll">Payroll Pool</option>
           <option value="advance">Advance Pool</option>
-          <option value="split">Split (custom %)</option>
+          <option value="split">Custom Split</option>
         </select>
       </div>
       <div class="field" id="s_split_field" style="display:none">
@@ -289,10 +296,39 @@
           <input id="s_split_tre" type="number" placeholder="20" min="0" max="100" style="flex:1">
         </div>
       </div>
-      <button class="modal-danger" id="streamDeleteBtn" onclick="deleteStream()" style="display:none">Remove Stream</button>
+      <div style="background:#0a1a2a;border:1px solid #1e3a5f;padding:12px;border-radius:8px;font-size:12px;color:#93c5fd;margin-top:16px;line-height:1.5">
+        <strong>How claiming works:</strong> When you want to move funds from this wallet, switch Phantom to this wallet address, then click "Claim" in Paycheck. We'll build and send the transaction — Phantom asks you to sign with the wallet that owns the revenue. No keys ever touch Paycheck.
+      </div>
+      <button class="modal-danger" id="streamDeleteBtn" onclick="deleteStream()" style="display:none;margin-top:12px">Remove Stream</button>
       <div class="modal-btns">
         <button class="modal-cancel" onclick="closeModal('streamModal')">Cancel</button>
-        <button class="modal-submit" onclick="saveStream()">Connect Stream</button>
+        <button class="modal-submit" onclick="saveStream()">Save Stream</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Claim Revenue Modal -->
+  <div class="modal" id="claimModal">
+    <div class="modal-box" style="max-width:500px">
+      <h3>Claim Revenue to Treasury</h3>
+      <p id="claimDesc">This will transfer the entire USDC balance of this revenue wallet to your treasury wallet. You must be connected as the revenue wallet in Phantom to sign.</p>
+      <div class="field"><label>Revenue Wallet</label><input id="claim_source" readonly style="font-family:monospace;font-size:11px;color:#9ca3af"></div>
+      <div class="field"><label>Available Balance</label><input id="claim_bal" readonly style="color:#6ee7b7;font-weight:600"></div>
+      <div class="field"><label>Destination (Treasury)</label><input id="claim_dest" readonly style="font-family:monospace;font-size:11px;color:#9ca3af"></div>
+      <div class="field"><label>Amount to Claim (USDC)</label><input id="claim_amount" type="number" step="0.01"></div>
+      <div id="claimActivePrompt" style="background:#2a1810;border:1px solid #5f3a1e;padding:12px;border-radius:8px;font-size:12px;color:#fcd34d;margin-top:12px;line-height:1.5;display:none">
+        ⚠ <strong>You are NOT connected as the revenue wallet.</strong> Open Phantom, switch to <span id="claimExpectedWallet" style="font-family:monospace"></span>, then come back.
+      </div>
+      <div id="claimReady" style="background:#0a2818;border:1px solid #065f46;padding:12px;border-radius:8px;font-size:12px;color:#6ee7b7;margin-top:12px;display:none">
+        ✓ Connected as the correct wallet. Ready to sign.
+      </div>
+      <div id="claimTx" class="tx-result">
+        <p>✓ Claim sent on Solana mainnet</p>
+        <a id="claimTxLink" href="#" target="_blank">View on Solscan</a>
+      </div>
+      <div class="modal-btns">
+        <button class="modal-cancel" onclick="closeModal('claimModal')">Cancel</button>
+        <button class="modal-submit" id="claimBtn" onclick="executeClaim()">Sign &amp; Claim</button>
       </div>
     </div>
   </div>
@@ -417,7 +453,17 @@ function onConn(){
   document.getElementById('dashboard').classList.add('visible');
   document.getElementById('teamSwitcher').style.display='flex';
   dbg('Wallet connected: '+s,'ok');
-  toast('Wallet connected');
+
+  // Identify whether this is the treasury wallet or a revenue wallet
+  const team=getActiveTeam();
+  const matchedStream=(team.streams||[]).find(x=>x.wallet===pk);
+  if(matchedStream){
+    toast('Connected as revenue wallet: '+matchedStream.name);
+  }else{
+    rememberTreasury();
+    toast('Wallet connected');
+  }
+
   fetchBalances();renderAll();
 }
 
@@ -475,26 +521,44 @@ function renderStreams(){
   const team=getActiveTeam();
   if(!team.streams)team.streams=[];
   const list=document.getElementById('streamList');
+
+  // Update active wallet banner
+  const banner=document.getElementById('activeWalletBanner');
+  if(pk&&team.streams.length){
+    const matched=team.streams.find(s=>s.wallet===pk);
+    if(matched){
+      banner.style.display='block';
+      document.getElementById('activeWalletName').textContent=matched.name;
+      document.getElementById('activeWalletAddr').textContent=' '+pk.slice(0,6)+'...'+pk.slice(-4);
+    }else{
+      banner.style.display='none';
+    }
+  }else{
+    banner.style.display='none';
+  }
+
   if(!team.streams.length){
-    list.innerHTML='<div class="empty-state">No revenue streams connected yet. Add a protocol wallet to start routing onchain revenue to your team.</div>';
+    list.innerHTML='<div class="empty-state">No revenue streams connected yet. Add a protocol wallet to start watching onchain revenue.</div>';
     return;
   }
   list.innerHTML=team.streams.map((s,i)=>{
     const routeLabel=s.route==='treasury'?'→ Treasury':s.route==='payroll'?'→ Payroll Pool':s.route==='advance'?'→ Advance Pool':`→ Split ${s.split||''}`;
     const bal=s.lastBalance||{sol:0,usdc:0};
     const lastCheck=s.lastBalance&&s.lastBalance.ts?new Date(s.lastBalance.ts).toLocaleTimeString():'never';
-    return `<div class="contributor-row" style="flex-direction:column;align-items:stretch;gap:8px">
+    const isActive=pk===s.wallet;
+    const activeTag=isActive?'<span style="color:#6ee7b7;font-size:11px;margin-left:8px">• SIGNING</span>':'';
+    return `<div class="contributor-row" style="flex-direction:column;align-items:stretch;gap:8px;${isActive?'border:1px solid #065f46;border-radius:8px;padding:12px;background:#0a1810':''}">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div class="contrib-info" style="cursor:pointer" onclick="openEditStream(${i})">
           <div class="contrib-avatar">${(SOURCE_LABELS[s.source]||'🔗').charAt(0)}</div>
           <div>
-            <div class="contrib-name">${s.name} <span style="color:#6b7280;font-weight:400;font-size:11px">• ${SOURCE_LABELS[s.source]||s.source}</span></div>
+            <div class="contrib-name">${s.name}${activeTag} <span style="color:#6b7280;font-weight:400;font-size:11px">• ${SOURCE_LABELS[s.source]||s.source}</span></div>
             <div class="contrib-wallet">${s.wallet.slice(0,8)}...${s.wallet.slice(-6)}</div>
           </div>
         </div>
         <div class="contrib-actions">
           <button class="action-btn" onclick="refreshStream(${i})" title="Refresh balance">↻</button>
-          <button class="pay-btn" onclick="claimStream(${i})">Claim → Treasury</button>
+          <button class="pay-btn" onclick="openClaim(${i})">Claim</button>
         </div>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;background:#0a0a0a;padding:10px 12px;border-radius:8px;font-size:12px">
@@ -506,6 +570,127 @@ function renderStreams(){
       </div>
     </div>`;
   }).join('');
+
+  // Show/hide the "Sign as..." button depending on whether any streams exist
+  document.getElementById('activeWalletBtn').style.display=team.streams.length?'inline-block':'none';
+}
+
+// Switch Phantom connection to a revenue wallet
+async function switchRevenueWallet(){
+  const prov=window.phantom?.solana||window.solana;
+  if(!prov?.isPhantom){toast('Phantom not found',1);return}
+  toast('Disconnecting current wallet...');
+  try{
+    await prov.disconnect();
+    await new Promise(r=>setTimeout(r,500));
+    toast('In Phantom: switch to your revenue wallet, then click Connect again',false,6000);
+    pk=null;
+    document.getElementById('connectBtn').textContent='Connect Wallet';
+    document.getElementById('connectBtn').classList.remove('connected');
+  }catch(e){
+    toast('Disconnect failed: '+e.message,1);
+  }
+}
+
+// Claim flow: trigger a transfer from the revenue wallet to the treasury
+let _claimContext=null;
+
+function openClaim(streamIdx){
+  const team=getActiveTeam();
+  const s=team.streams[streamIdx];
+  _claimContext={streamIdx,stream:s};
+
+  document.getElementById('claim_source').value=s.wallet;
+  document.getElementById('claim_dest').value=team.treasury||pk||'(connect wallet first)';
+  const bal=s.lastBalance||{usdc:0};
+  document.getElementById('claim_bal').value=bal.usdc.toFixed(2)+' USDC';
+  document.getElementById('claim_amount').value=bal.usdc.toFixed(2);
+
+  // Check if currently connected wallet matches the stream wallet
+  const isCorrectWallet=pk===s.wallet;
+  document.getElementById('claimActivePrompt').style.display=isCorrectWallet?'none':'block';
+  document.getElementById('claimReady').style.display=isCorrectWallet?'block':'none';
+  document.getElementById('claimExpectedWallet').textContent=s.wallet.slice(0,8)+'...'+s.wallet.slice(-6);
+  document.getElementById('claimTx').classList.remove('show');
+  const btn=document.getElementById('claimBtn');
+  btn.disabled=!isCorrectWallet;
+  btn.textContent=isCorrectWallet?'Sign & Claim':'Switch wallet in Phantom first';
+
+  document.getElementById('claimModal').classList.add('open');
+}
+
+async function executeClaim(){
+  if(!_claimContext)return;
+  const s=_claimContext.stream;
+  const amount=parseFloat(document.getElementById('claim_amount').value);
+  const team=getActiveTeam();
+  const destination=team.treasury||pk;
+
+  if(!amount||amount<=0){toast('Invalid amount',1);return}
+  if(pk!==s.wallet){toast('You must be connected as the revenue wallet to claim',1);return}
+  if(!destination){toast('No destination wallet',1);return}
+
+  const btn=document.getElementById('claimBtn');
+  btn.disabled=true;btn.textContent='Preparing transaction...';
+
+  try{
+    const sig=await sendOneUSDC(destination,team.name+' treasury',amount,'Claim from '+s.name);
+    document.getElementById('claimTxLink').href='https://solscan.io/tx/'+sig;
+    document.getElementById('claimTxLink').textContent=sig.slice(0,20)+'... View on Solscan';
+    document.getElementById('claimTx').classList.add('show');
+    btn.textContent='✓ Claimed';
+
+    // Record the claim in the stream
+    if(!s.claims)s.claims=[];
+    s.claims.unshift({amount,destination,sig,ts:Date.now()});
+    // Update balance (will refresh)
+    setTimeout(()=>refreshStream(_claimContext.streamIdx),2000);
+    saveTeams();
+    toast('Claimed '+amount+' USDC from '+s.name);
+  }catch(e){
+    btn.disabled=false;btn.textContent='Sign & Claim';
+    toast('Claim failed: '+(e.message||'unknown').slice(0,80),1);
+  }
+}
+
+// ========== Export / Import Team Data ==========
+function exportTeamData(){
+  const data={
+    version:1,
+    exportedAt:new Date().toISOString(),
+    teams:teams,
+    activeTeamId:activeTeamId
+  };
+  const json=JSON.stringify(data,null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='paycheck-whiteclaw-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast('Team data exported');
+}
+
+function importTeamData(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.teams||!Array.isArray(data.teams)){throw new Error('Invalid backup file')}
+      if(!confirm(`Restore ${data.teams.length} team(s)? This replaces current data.`))return;
+      teams=data.teams;
+      activeTeamId=data.activeTeamId||teams[0].id;
+      saveTeams();renderAll();
+      toast('Imported '+data.teams.length+' team(s)');
+    }catch(err){
+      toast('Invalid backup file: '+err.message,1);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value='';
 }
 
 function openAddStream(){
@@ -587,20 +772,13 @@ async function refreshStream(i){
   else toast(s.name+': '+s.lastBalance.usdc.toFixed(2)+' USDC / '+s.lastBalance.sol.toFixed(4)+' SOL');
 }
 
-function claimStream(i){
+// Mark the currently connected wallet as the team's treasury (first wallet that connects)
+function rememberTreasury(){
   const team=getActiveTeam();
-  const s=team.streams[i];
-  const bal=s.lastBalance||{usdc:0,sol:0};
-  if(!bal.usdc&&!bal.sol){toast('No balance to claim. Refresh first.',1);return}
-  toast(`${s.name} shows ${bal.usdc.toFixed(2)} USDC available. Manual claim from ${s.wallet.slice(0,8)}... Full onchain claim flow coming soon.`,false,6000);
-  // Record a claim intent for the demo
-  if(!team.streamClaims)team.streamClaims=[];
-  team.streamClaims.unshift({
-    streamName:s.name,source:s.source,wallet:s.wallet,
-    amount:bal.usdc,route:s.route,ts:Date.now(),
-    status:'pending_signature'
-  });
-  saveTeams();
+  if(!team.treasury&&pk){
+    const matched=(team.streams||[]).find(s=>s.wallet===pk);
+    if(!matched){team.treasury=pk;saveTeams();}
+  }
 }
 
 function deleteStream(){
