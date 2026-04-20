@@ -309,15 +309,42 @@
 
   <!-- Claim Revenue Modal -->
   <div class="modal" id="claimModal">
-    <div class="modal-box" style="max-width:500px">
-      <h3>Claim Revenue to Treasury</h3>
-      <p id="claimDesc">This will transfer the entire USDC balance of this revenue wallet to your treasury wallet. You must be connected as the revenue wallet in Phantom to sign.</p>
+    <div class="modal-box" style="max-width:520px">
+      <h3>Claim Revenue</h3>
+      <p id="claimDesc">Transfer funds from the revenue wallet. If the destination expects USDC, Paycheck auto-swaps SOL via Jupiter in the same transaction. You sign once from the revenue wallet — your keys never leave Phantom.</p>
       <div class="field"><label>Revenue Wallet</label><input id="claim_source" readonly style="font-family:monospace;font-size:11px;color:#9ca3af"></div>
-      <div class="field"><label>Available Balance</label><input id="claim_bal" readonly style="color:#6ee7b7;font-weight:600"></div>
-      <div class="field"><label>Destination (Treasury)</label><input id="claim_dest" readonly style="font-family:monospace;font-size:11px;color:#9ca3af"></div>
-      <div class="field"><label>Amount to Claim (USDC)</label><input id="claim_amount" type="number" step="0.01"></div>
+      <div class="field">
+        <label>Available Balance</label>
+        <div style="display:flex;gap:8px">
+          <input id="claim_sol_bal" readonly style="flex:1;color:#fcd34d;font-weight:600" placeholder="SOL">
+          <input id="claim_usdc_bal" readonly style="flex:1;color:#6ee7b7;font-weight:600" placeholder="USDC">
+        </div>
+      </div>
+      <div class="field">
+        <label>Destination</label>
+        <select id="claim_dest_type" onchange="updateClaimPreview()">
+          <option value="treasury">Team Treasury (keep as native token)</option>
+          <option value="payroll">Payroll Pool (auto-swap to USDC)</option>
+          <option value="advance">Advance Pool (auto-swap to USDC)</option>
+        </select>
+      </div>
+      <div class="field"><label>Destination Wallet</label><input id="claim_dest" readonly style="font-family:monospace;font-size:11px;color:#9ca3af"></div>
+      <div class="field">
+        <label>Token to Claim</label>
+        <select id="claim_token" onchange="updateClaimPreview()">
+          <option value="SOL">SOL</option>
+          <option value="USDC">USDC</option>
+        </select>
+      </div>
+      <div class="field"><label>Amount</label><input id="claim_amount" type="number" step="0.0001" oninput="updateClaimPreview()"></div>
+      <div id="claimPreview" style="background:#0a1a2a;border:1px solid #1e3a5f;padding:12px;border-radius:8px;font-size:13px;color:#93c5fd;margin-top:12px;line-height:1.6;display:none">
+        <div id="claimPreviewText"></div>
+        <div id="claimSwapDetails" style="font-size:11px;color:#6b7280;margin-top:6px"></div>
+      </div>
       <div id="claimActivePrompt" style="background:#2a1810;border:1px solid #5f3a1e;padding:12px;border-radius:8px;font-size:12px;color:#fcd34d;margin-top:12px;line-height:1.5;display:none">
-        ⚠ <strong>You are NOT connected as the revenue wallet.</strong> Open Phantom, switch to <span id="claimExpectedWallet" style="font-family:monospace"></span>, then come back.
+        ⚠ <strong>Switch Phantom to this wallet first.</strong><br>
+        Open Phantom → click account icon (top) → select <span id="claimExpectedWallet" style="font-family:monospace"></span><br>
+        <span style="color:#9ca3af;font-size:11px">Your keys never leave Phantom. Paycheck just detects which account is active.</span>
       </div>
       <div id="claimReady" style="background:#0a2818;border:1px solid #065f46;padding:12px;border-radius:8px;font-size:12px;color:#6ee7b7;margin-top:12px;display:none">
         ✓ Connected as the correct wallet. Ready to sign.
@@ -592,37 +619,105 @@ async function switchRevenueWallet(){
   }
 }
 
-// Claim flow: trigger a transfer from the revenue wallet to the treasury
+// ========== Claim flow with Jupiter swap support ==========
+const SOL_MINT='So11111111111111111111111111111111111111112';
+const JUPITER_API='https://quote-api.jup.ag/v6';
 let _claimContext=null;
+let _jupiterQuote=null;
 
 function openClaim(streamIdx){
   const team=getActiveTeam();
   const s=team.streams[streamIdx];
   _claimContext={streamIdx,stream:s};
+  _jupiterQuote=null;
 
+  const bal=s.lastBalance||{sol:0,usdc:0};
   document.getElementById('claim_source').value=s.wallet;
-  document.getElementById('claim_dest').value=team.treasury||pk||'(connect wallet first)';
-  const bal=s.lastBalance||{usdc:0};
-  document.getElementById('claim_bal').value=bal.usdc.toFixed(2)+' USDC';
-  document.getElementById('claim_amount').value=bal.usdc.toFixed(2);
+  document.getElementById('claim_sol_bal').value=bal.sol.toFixed(4)+' SOL';
+  document.getElementById('claim_usdc_bal').value=bal.usdc.toFixed(2)+' USDC';
 
-  // Check if currently connected wallet matches the stream wallet
+  // Auto-detect which token has balance and set as default
+  if(bal.sol>0.001&&bal.usdc<0.01){
+    document.getElementById('claim_token').value='SOL';
+    document.getElementById('claim_amount').value=Math.max(0,bal.sol-0.005).toFixed(4); // leave dust for fees
+  }else{
+    document.getElementById('claim_token').value='USDC';
+    document.getElementById('claim_amount').value=bal.usdc.toFixed(2);
+  }
+
+  document.getElementById('claim_dest_type').value=s.route==='payroll'?'payroll':s.route==='advance'?'advance':'treasury';
+  document.getElementById('claim_dest').value=team.treasury||pk||'(set treasury first)';
+
+  // Wallet switch check
   const isCorrectWallet=pk===s.wallet;
   document.getElementById('claimActivePrompt').style.display=isCorrectWallet?'none':'block';
   document.getElementById('claimReady').style.display=isCorrectWallet?'block':'none';
   document.getElementById('claimExpectedWallet').textContent=s.wallet.slice(0,8)+'...'+s.wallet.slice(-6);
   document.getElementById('claimTx').classList.remove('show');
+
   const btn=document.getElementById('claimBtn');
   btn.disabled=!isCorrectWallet;
   btn.textContent=isCorrectWallet?'Sign & Claim':'Switch wallet in Phantom first';
 
   document.getElementById('claimModal').classList.add('open');
+  updateClaimPreview();
+}
+
+async function updateClaimPreview(){
+  if(!_claimContext)return;
+  const token=document.getElementById('claim_token').value;
+  const destType=document.getElementById('claim_dest_type').value;
+  const amount=parseFloat(document.getElementById('claim_amount').value)||0;
+  const preview=document.getElementById('claimPreview');
+  const previewText=document.getElementById('claimPreviewText');
+  const swapDetails=document.getElementById('claimSwapDetails');
+
+  if(amount<=0){preview.style.display='none';return}
+  preview.style.display='block';
+
+  // Does destination want USDC? (payroll/advance pools = yes)
+  const destWantsUSDC=destType==='payroll'||destType==='advance';
+  const needsSwap=token==='SOL'&&destWantsUSDC;
+
+  if(!needsSwap){
+    previewText.innerHTML=`<strong>Direct transfer:</strong> ${amount} ${token} → ${destType}`;
+    swapDetails.textContent='No swap needed. One signature.';
+    _jupiterQuote=null;
+    return;
+  }
+
+  // Need Jupiter quote
+  previewText.innerHTML=`<strong>Auto-swap via Jupiter:</strong> Fetching quote...`;
+  swapDetails.textContent='';
+  try{
+    const lamports=Math.floor(amount*1e9);
+    const quoteUrl=`${JUPITER_API}/quote?inputMint=${SOL_MINT}&outputMint=${USDC_MINT}&amount=${lamports}&slippageBps=100`;
+    const r=await fetch(quoteUrl);
+    const quote=await r.json();
+    if(quote.error){
+      previewText.innerHTML='<strong style="color:#fca5a5">Swap unavailable:</strong> '+quote.error;
+      swapDetails.textContent='';
+      _jupiterQuote=null;
+      return;
+    }
+    _jupiterQuote=quote;
+    const outUsdc=Number(quote.outAmount)/1e6;
+    const priceImpact=(Number(quote.priceImpactPct||0)*100).toFixed(3);
+    previewText.innerHTML=`<strong>Swap ${amount} SOL → ~${outUsdc.toFixed(2)} USDC</strong> via Jupiter, then route to ${destType}`;
+    swapDetails.textContent=`Price impact: ${priceImpact}% • Slippage: 1% • Route: ${(quote.routePlan||[]).length} hop(s)`;
+  }catch(e){
+    previewText.innerHTML='<strong style="color:#fca5a5">Could not fetch Jupiter quote</strong>';
+    swapDetails.textContent=e.message;
+    _jupiterQuote=null;
+  }
 }
 
 async function executeClaim(){
   if(!_claimContext)return;
   const s=_claimContext.stream;
   const amount=parseFloat(document.getElementById('claim_amount').value);
+  const token=document.getElementById('claim_token').value;
+  const destType=document.getElementById('claim_dest_type').value;
   const team=getActiveTeam();
   const destination=team.treasury||pk;
 
@@ -633,24 +728,119 @@ async function executeClaim(){
   const btn=document.getElementById('claimBtn');
   btn.disabled=true;btn.textContent='Preparing transaction...';
 
+  const destWantsUSDC=destType==='payroll'||destType==='advance';
+  const needsSwap=token==='SOL'&&destWantsUSDC;
+
   try{
-    const sig=await sendOneUSDC(destination,team.name+' treasury',amount,'Claim from '+s.name);
+    let sig;
+    if(needsSwap){
+      // Jupiter swap: SOL → USDC in destination's wallet
+      btn.textContent='Building Jupiter swap...';
+      sig=await executeJupiterSwap(amount,destination);
+    }else if(token==='SOL'){
+      // Direct SOL transfer
+      btn.textContent='Preparing SOL transfer...';
+      sig=await sendNativeSOL(destination,amount);
+    }else{
+      // Direct USDC transfer (existing code path)
+      btn.textContent='Preparing USDC transfer...';
+      sig=await sendOneUSDC(destination,team.name+' treasury',amount,'Claim from '+s.name);
+    }
+
     document.getElementById('claimTxLink').href='https://solscan.io/tx/'+sig;
     document.getElementById('claimTxLink').textContent=sig.slice(0,20)+'... View on Solscan';
     document.getElementById('claimTx').classList.add('show');
     btn.textContent='✓ Claimed';
 
-    // Record the claim in the stream
     if(!s.claims)s.claims=[];
-    s.claims.unshift({amount,destination,sig,ts:Date.now()});
-    // Update balance (will refresh)
-    setTimeout(()=>refreshStream(_claimContext.streamIdx),2000);
+    s.claims.unshift({amount,token,destination,destType,swapped:needsSwap,sig,ts:Date.now()});
+    setTimeout(()=>refreshStream(_claimContext.streamIdx),2500);
     saveTeams();
-    toast('Claimed '+amount+' USDC from '+s.name);
+    toast(`Claimed ${amount} ${token} → ${destType}${needsSwap?' (swapped to USDC)':''}`);
   }catch(e){
     btn.disabled=false;btn.textContent='Sign & Claim';
-    toast('Claim failed: '+(e.message||'unknown').slice(0,80),1);
+    const m=e.message||'unknown';
+    if(m.includes('rejected')||m.includes('User'))toast('Cancelled',1);
+    else toast('Claim failed: '+m.slice(0,100),1);
+    console.error('Claim error:',e);
   }
+}
+
+// Send native SOL from current wallet to destination
+async function sendNativeSOL(destination,amountSol){
+  const prov=window.phantom?.solana||window.solana;
+  const conn=new solanaWeb3.Connection(RPC,'confirmed');
+  const senderPk=new solanaWeb3.PublicKey(pk);
+  const recipPk=new solanaWeb3.PublicKey(destination);
+  const lamports=Math.floor(amountSol*1e9);
+
+  const tx=new solanaWeb3.Transaction();
+  tx.add(solanaWeb3.SystemProgram.transfer({
+    fromPubkey:senderPk,
+    toPubkey:recipPk,
+    lamports
+  }));
+  tx.add(new solanaWeb3.TransactionInstruction({
+    keys:[{pubkey:senderPk,isSigner:true,isWritable:false}],
+    programId:new solanaWeb3.PublicKey(MEMO_PROG),
+    data:new TextEncoder().encode('paycheck:claim:'+amountSol+':SOL')
+  }));
+
+  const {blockhash}=await conn.getLatestBlockhash();
+  tx.recentBlockhash=blockhash;
+  tx.feePayer=senderPk;
+  const {signature}=await prov.signAndSendTransaction(tx);
+  return signature;
+}
+
+// Jupiter swap: SOL → USDC, delivered to destination
+async function executeJupiterSwap(amountSol,destination){
+  if(!_jupiterQuote){
+    // Re-fetch quote if not cached
+    const lamports=Math.floor(amountSol*1e9);
+    const quoteUrl=`${JUPITER_API}/quote?inputMint=${SOL_MINT}&outputMint=${USDC_MINT}&amount=${lamports}&slippageBps=100`;
+    const r=await fetch(quoteUrl);
+    _jupiterQuote=await r.json();
+    if(_jupiterQuote.error)throw new Error('Jupiter quote failed: '+_jupiterQuote.error);
+  }
+
+  // Request Jupiter to build swap transaction with destination account
+  const swapBody={
+    quoteResponse:_jupiterQuote,
+    userPublicKey:pk,
+    destinationTokenAccount:null, // will create/use ATA of destination
+    wrapAndUnwrapSol:true,
+    prioritizationFeeLamports:'auto',
+    dynamicComputeUnitLimit:true
+  };
+
+  // For routing to a DIFFERENT wallet (not self), we need the destination's USDC ATA
+  // Derive it
+  if(destination!==pk){
+    const destPk=new solanaWeb3.PublicKey(destination);
+    const [destATA]=solanaWeb3.PublicKey.findProgramAddressSync(
+      [destPk.toBuffer(),new solanaWeb3.PublicKey(TOKEN_PROG).toBuffer(),new solanaWeb3.PublicKey(USDC_MINT).toBuffer()],
+      new solanaWeb3.PublicKey(ASSOC_TOKEN_PROG)
+    );
+    swapBody.destinationTokenAccount=destATA.toString();
+  }
+
+  const swapResp=await fetch(`${JUPITER_API}/swap`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(swapBody)
+  });
+  const swap=await swapResp.json();
+  if(swap.error)throw new Error('Jupiter swap failed: '+swap.error);
+  if(!swap.swapTransaction)throw new Error('No swap transaction returned');
+
+  // Deserialize, sign, send
+  const swapTxBuf=Uint8Array.from(atob(swap.swapTransaction),c=>c.charCodeAt(0));
+  const vtx=solanaWeb3.VersionedTransaction.deserialize(swapTxBuf);
+
+  const prov=window.phantom?.solana||window.solana;
+  const {signature}=await prov.signAndSendTransaction(vtx);
+  return signature;
 }
 
 // ========== Export / Import Team Data ==========
