@@ -121,10 +121,10 @@
 
   <div id="heroSection">
     <div class="hero">
-      <p class="hero-eyebrow">White Claw — Crypto-Native Fintech</p>
+      <p class="hero-eyebrow">White Claw — Payment Orchestration for Onchain Companies</p>
       <h1 class="hero-title">Paycheck</h1>
-      <p class="hero-sub">Stablecoin payroll with yield-powered advances for crypto-native teams.</p>
-      <p class="hero-body">Set up your team once. Funds earn yield automatically. Contributors get paid on schedule and can advance instantly at zero cost.</p>
+      <p class="hero-sub">Crypto-native payroll on Solana — batch pay, tap-once yield-funded advances, and protocol revenue routed back to the workers who earned it.</p>
+      <p class="hero-body">One rail for every payment an onchain company makes. Pay contributors in seconds, route pump.fun/Meteora/Raydium rewards to the team, let contributors advance against their next paycheck. Every transaction verifiable on Solscan.</p>
       <div class="btn-row">
         <button class="btn-primary" onclick="connectWallet()">Connect Wallet to Start</button>
         <a href="https://twitter.com/whiteclawonsol" target="_blank" class="btn-secondary">Follow Build</a>
@@ -133,10 +133,10 @@
     <section class="info">
       <h2 class="st">How it works</h2>
       <div class="hg">
-        <div class="hi"><div class="hn">01</div><div class="ht">Connect wallet</div><div class="hd">Sign in with Phantom. Your wallet is your identity and control key.</div></div>
-        <div class="hi"><div class="hn">02</div><div class="ht">Add your team</div><div class="hd">Add contributors by wallet. Set amounts and schedules.</div></div>
-        <div class="hi"><div class="hn">03</div><div class="ht">Funds earn yield</div><div class="hd">Idle payroll funds earn yield automatically via Reflect.</div></div>
-        <div class="hi"><div class="hn">04</div><div class="ht">Pay and advance</div><div class="hd">Contributors get paid or advance instantly. Zero fees.</div></div>
+        <div class="hi"><div class="hn">01</div><div class="ht">Payroll</div><div class="hd">Batch pay contributors in USDC. Sub-second. Every payment on-chain with a memo. Verifiable on Solscan.</div></div>
+        <div class="hi"><div class="hn">02</div><div class="ht">Yield Advances</div><div class="hd">Contributors tap once to advance against their next paycheck. Idle balance yield auto-repays over 14 days. Zero worker fees.</div></div>
+        <div class="hi"><div class="hn">03</div><div class="ht">Revenue Routing</div><div class="hd">Connect pump.fun, Meteora, Raydium fee wallets. Auto-route protocol revenue to payroll, advance pool, or treasury.</div></div>
+        <div class="hi"><div class="hn">04</div><div class="ht">One Rail</div><div class="hd">Payroll + vendor pay + protocol rewards in a single control surface. Multi-team. Exportable. Built for onchain companies.</div></div>
       </div>
     </section>
     <section class="info" style="text-align:center">
@@ -192,6 +192,20 @@
       </div>
       <div id="contribList"><div class="empty-state">No contributors yet — add your first team member above.</div></div>
     </div>
+
+    <!-- Revenue Streams Panel (Mode 3) -->
+    <div class="panel">
+      <div class="panel-header">
+        <h3>💸 Revenue Streams</h3>
+        <div class="panel-actions">
+          <button class="add-btn" onclick="openAddStream()">+ Connect Wallet</button>
+        </div>
+      </div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.5">
+        Connect protocol fee wallets (pump.fun creator, Meteora LP, Raydium fees, or any SOL/USDC earning wallet). Paycheck monitors incoming revenue and can route it to payroll, the advance pool, or contributor bonuses.
+      </div>
+      <div id="streamList"><div class="empty-state">No revenue streams connected yet. Add a protocol wallet to start routing onchain revenue to your team.</div></div>
+    </div>
     <div class="panel">
       <div class="panel-header">
         <h3>Payment Activity</h3>
@@ -235,6 +249,50 @@
       <div class="modal-btns">
         <button class="modal-cancel" onclick="closeModal('addModal')">Cancel</button>
         <button class="modal-submit" onclick="saveContrib()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Revenue Stream Modal -->
+  <div class="modal" id="streamModal">
+    <div class="modal-box" style="max-width:500px">
+      <h3 id="streamModalTitle">Connect Revenue Stream</h3>
+      <p>Paste a Solana wallet address that receives protocol fees or rewards (pump.fun creator wallet, Meteora LP rewards, Raydium fees, or any earning wallet). We'll read the balance and show incoming revenue so you can route it.</p>
+      <input type="hidden" id="streamEditIndex" value="-1">
+      <div class="field"><label>Stream Name</label><input id="s_name" placeholder="e.g. Pump.fun creator fees"></div>
+      <div class="field">
+        <label>Source Type</label>
+        <select id="s_source">
+          <option value="pumpfun">pump.fun creator fees</option>
+          <option value="meteora">Meteora LP rewards</option>
+          <option value="raydium">Raydium LP fees</option>
+          <option value="orca">Orca LP fees</option>
+          <option value="jupiter">Jupiter referral fees</option>
+          <option value="generic">Other / Custom</option>
+        </select>
+      </div>
+      <div class="field"><label>Solana Wallet Address</label><input id="s_wallet" placeholder="Paste wallet address..." style="font-family:monospace;font-size:12px"></div>
+      <div class="field">
+        <label>Route Revenue To</label>
+        <select id="s_route">
+          <option value="treasury">Team Treasury (manual claim)</option>
+          <option value="payroll">Payroll Pool</option>
+          <option value="advance">Advance Pool</option>
+          <option value="split">Split (custom %)</option>
+        </select>
+      </div>
+      <div class="field" id="s_split_field" style="display:none">
+        <label>Split (Payroll / Advance / Treasury %)</label>
+        <div style="display:flex;gap:8px">
+          <input id="s_split_pay" type="number" placeholder="40" min="0" max="100" style="flex:1">
+          <input id="s_split_adv" type="number" placeholder="40" min="0" max="100" style="flex:1">
+          <input id="s_split_tre" type="number" placeholder="20" min="0" max="100" style="flex:1">
+        </div>
+      </div>
+      <button class="modal-danger" id="streamDeleteBtn" onclick="deleteStream()" style="display:none">Remove Stream</button>
+      <div class="modal-btns">
+        <button class="modal-cancel" onclick="closeModal('streamModal')">Cancel</button>
+        <button class="modal-submit" onclick="saveStream()">Connect Stream</button>
       </div>
     </div>
   </div>
@@ -378,9 +436,181 @@ async function fetchBalances(){
 
 function renderAll(){
   const team=getActiveTeam();
+  if(!team.streams)team.streams=[];
   document.getElementById('teamName').textContent=team.name;
   document.getElementById('teamTitle').textContent=team.name+' — Members';
-  renderC();renderPayments();updateAnalytics();
+  renderC();renderPayments();updateAnalytics();renderStreams();
+}
+
+// ========== Revenue Streams (Mode 3) ==========
+const SOURCE_LABELS={
+  pumpfun:'💊 pump.fun',
+  meteora:'🌠 Meteora',
+  raydium:'⚡ Raydium',
+  orca:'🐳 Orca',
+  jupiter:'🌌 Jupiter',
+  generic:'🔗 Custom'
+};
+
+async function fetchStreamBalance(walletAddr){
+  try{
+    const conn=new solanaWeb3.Connection(RPC,'confirmed');
+    const pk=new solanaWeb3.PublicKey(walletAddr);
+    const mintPk=new solanaWeb3.PublicKey(USDC_MINT);
+    const sol=await conn.getBalance(pk);
+    const solBal=sol/1e9;
+    let usdcBal=0;
+    try{
+      const res=await conn.getParsedTokenAccountsByOwner(pk,{mint:mintPk});
+      if(res.value.length>0)usdcBal=res.value[0].account.data.parsed.info.tokenAmount.uiAmount||0;
+    }catch(e){}
+    return {sol:solBal,usdc:usdcBal,ts:Date.now()};
+  }catch(e){
+    dbg('Stream balance fetch failed: '+e.message,'err');
+    return {sol:0,usdc:0,err:e.message};
+  }
+}
+
+function renderStreams(){
+  const team=getActiveTeam();
+  if(!team.streams)team.streams=[];
+  const list=document.getElementById('streamList');
+  if(!team.streams.length){
+    list.innerHTML='<div class="empty-state">No revenue streams connected yet. Add a protocol wallet to start routing onchain revenue to your team.</div>';
+    return;
+  }
+  list.innerHTML=team.streams.map((s,i)=>{
+    const routeLabel=s.route==='treasury'?'→ Treasury':s.route==='payroll'?'→ Payroll Pool':s.route==='advance'?'→ Advance Pool':`→ Split ${s.split||''}`;
+    const bal=s.lastBalance||{sol:0,usdc:0};
+    const lastCheck=s.lastBalance&&s.lastBalance.ts?new Date(s.lastBalance.ts).toLocaleTimeString():'never';
+    return `<div class="contributor-row" style="flex-direction:column;align-items:stretch;gap:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="contrib-info" style="cursor:pointer" onclick="openEditStream(${i})">
+          <div class="contrib-avatar">${(SOURCE_LABELS[s.source]||'🔗').charAt(0)}</div>
+          <div>
+            <div class="contrib-name">${s.name} <span style="color:#6b7280;font-weight:400;font-size:11px">• ${SOURCE_LABELS[s.source]||s.source}</span></div>
+            <div class="contrib-wallet">${s.wallet.slice(0,8)}...${s.wallet.slice(-6)}</div>
+          </div>
+        </div>
+        <div class="contrib-actions">
+          <button class="action-btn" onclick="refreshStream(${i})" title="Refresh balance">↻</button>
+          <button class="pay-btn" onclick="claimStream(${i})">Claim → Treasury</button>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;background:#0a0a0a;padding:10px 12px;border-radius:8px;font-size:12px">
+        <div>
+          <span style="color:#6ee7b7;font-weight:600">${bal.usdc.toFixed(2)} USDC</span>
+          <span style="color:#9ca3af;margin-left:8px">${bal.sol.toFixed(4)} SOL</span>
+        </div>
+        <div style="color:#6b7280">${routeLabel} • updated ${lastCheck}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAddStream(){
+  document.getElementById('streamModalTitle').textContent='Connect Revenue Stream';
+  document.getElementById('streamEditIndex').value='-1';
+  document.getElementById('s_name').value='';
+  document.getElementById('s_wallet').value='';
+  document.getElementById('s_source').value='pumpfun';
+  document.getElementById('s_route').value='treasury';
+  document.getElementById('s_split_field').style.display='none';
+  document.getElementById('streamDeleteBtn').style.display='none';
+  document.getElementById('streamModal').classList.add('open');
+}
+
+function openEditStream(i){
+  const team=getActiveTeam();
+  const s=team.streams[i];
+  document.getElementById('streamModalTitle').textContent='Edit Revenue Stream';
+  document.getElementById('streamEditIndex').value=i;
+  document.getElementById('s_name').value=s.name;
+  document.getElementById('s_wallet').value=s.wallet;
+  document.getElementById('s_source').value=s.source;
+  document.getElementById('s_route').value=s.route;
+  if(s.route==='split'&&s.split){
+    document.getElementById('s_split_field').style.display='block';
+    const parts=s.split.split('/');
+    if(parts.length===3){
+      document.getElementById('s_split_pay').value=parts[0];
+      document.getElementById('s_split_adv').value=parts[1];
+      document.getElementById('s_split_tre').value=parts[2];
+    }
+  }else{
+    document.getElementById('s_split_field').style.display='none';
+  }
+  document.getElementById('streamDeleteBtn').style.display='block';
+  document.getElementById('streamModal').classList.add('open');
+}
+
+document.addEventListener('change',function(e){
+  if(e.target&&e.target.id==='s_route'){
+    document.getElementById('s_split_field').style.display=e.target.value==='split'?'block':'none';
+  }
+});
+
+async function saveStream(){
+  const name=document.getElementById('s_name').value.trim();
+  const wallet=document.getElementById('s_wallet').value.trim();
+  const source=document.getElementById('s_source').value;
+  const route=document.getElementById('s_route').value;
+  const idx=parseInt(document.getElementById('streamEditIndex').value);
+  if(!name){toast('Enter a stream name',1);return}
+  if(!wallet||wallet.length<32){toast('Enter a valid wallet address',1);return}
+  try{new solanaWeb3.PublicKey(wallet)}catch(e){toast('Invalid wallet address',1);return}
+  let split='';
+  if(route==='split'){
+    const p=parseInt(document.getElementById('s_split_pay').value||'0');
+    const a=parseInt(document.getElementById('s_split_adv').value||'0');
+    const t=parseInt(document.getElementById('s_split_tre').value||'0');
+    if(p+a+t!==100){toast('Split must total 100%',1);return}
+    split=p+'/'+a+'/'+t;
+  }
+  const team=getActiveTeam();
+  if(!team.streams)team.streams=[];
+  const entry={name,wallet,source,route,split,addedAt:Date.now()};
+  toast('Fetching balance from chain...');
+  entry.lastBalance=await fetchStreamBalance(wallet);
+  if(idx>=0){team.streams[idx]=entry;toast(name+' updated');}
+  else{team.streams.push(entry);toast(name+' connected');}
+  saveTeams();closeModal('streamModal');renderStreams();
+}
+
+async function refreshStream(i){
+  const team=getActiveTeam();
+  const s=team.streams[i];
+  toast('Refreshing '+s.name+'...');
+  s.lastBalance=await fetchStreamBalance(s.wallet);
+  saveTeams();renderStreams();
+  if(s.lastBalance.err)toast('Failed: '+s.lastBalance.err,1);
+  else toast(s.name+': '+s.lastBalance.usdc.toFixed(2)+' USDC / '+s.lastBalance.sol.toFixed(4)+' SOL');
+}
+
+function claimStream(i){
+  const team=getActiveTeam();
+  const s=team.streams[i];
+  const bal=s.lastBalance||{usdc:0,sol:0};
+  if(!bal.usdc&&!bal.sol){toast('No balance to claim. Refresh first.',1);return}
+  toast(`${s.name} shows ${bal.usdc.toFixed(2)} USDC available. Manual claim from ${s.wallet.slice(0,8)}... Full onchain claim flow coming soon.`,false,6000);
+  // Record a claim intent for the demo
+  if(!team.streamClaims)team.streamClaims=[];
+  team.streamClaims.unshift({
+    streamName:s.name,source:s.source,wallet:s.wallet,
+    amount:bal.usdc,route:s.route,ts:Date.now(),
+    status:'pending_signature'
+  });
+  saveTeams();
+}
+
+function deleteStream(){
+  const idx=parseInt(document.getElementById('streamEditIndex').value);
+  if(idx<0)return;
+  const team=getActiveTeam();
+  const name=team.streams[idx].name;
+  if(!confirm('Remove '+name+' revenue stream?'))return;
+  team.streams.splice(idx,1);saveTeams();closeModal('streamModal');renderStreams();
+  toast(name+' disconnected');
 }
 
 function renderC(){
