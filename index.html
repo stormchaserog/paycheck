@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Paycheck by White Claw</title>
+  <title>Paycheck by WCLAW</title>
   <meta name="description" content="Stablecoin payroll with yield-powered advances for crypto-native teams. Built on Solana.">
   <link rel="canonical" href="https://paycheck.whiteclaw.dev/">
-  <meta property="og:title" content="Paycheck by White Claw">
+  <meta property="og:title" content="Paycheck by WCLAW">
   <meta property="og:description" content="Stablecoin payroll with yield-powered advances for crypto-native teams. Built on Solana.">
   <meta property="og:url" content="https://paycheck.whiteclaw.dev/">
   <meta property="og:site_name" content="White Claw">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:site" content="@whiteclawonsol">
-  <meta name="twitter:creator" content="@whiteclawonsol">
+  <meta name="twitter:site" content="@wclawonsolana">
+  <meta name="twitter:creator" content="@wclawonsolana">
   <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
@@ -110,7 +110,7 @@
 <body>
   <nav>
     <div class="nav-left">
-      <div class="nav-logo">Paycheck <span>by White Claw</span></div>
+      <div class="nav-logo">Paycheck <span>by WCLAW</span></div>
       <div class="team-switcher" id="teamSwitcher" onclick="openTeamSwitcher()" style="display:none">
         <span id="teamName">Main Team</span>
         <span style="color:#6b7280">▼</span>
@@ -121,13 +121,13 @@
 
   <div id="heroSection">
     <div class="hero">
-      <p class="hero-eyebrow">White Claw — Payment Orchestration for Onchain Companies</p>
+      <p class="hero-eyebrow">WCLAW — Payment Orchestration for Onchain Companies</p>
       <h1 class="hero-title">Paycheck</h1>
       <p class="hero-sub">Crypto-native payroll on Solana — batch pay, tap-once yield-funded advances, and protocol revenue routed back to the workers who earned it.</p>
       <p class="hero-body">One rail for every payment an onchain company makes. Pay contributors in seconds, route pump.fun/Meteora/Raydium rewards to the team, let contributors advance against their next paycheck. Every transaction verifiable on Solscan.</p>
       <div class="btn-row">
         <button class="btn-primary" onclick="connectWallet()">Connect Wallet to Start</button>
-        <a href="https://twitter.com/whiteclawonsol" target="_blank" class="btn-secondary">Follow Build</a>
+        <a href="https://twitter.com/wclawonsolana" target="_blank" class="btn-secondary">Follow Build</a>
       </div>
     </div>
     <section class="info">
@@ -165,6 +165,24 @@
       <div class="card"><div class="card-label">SOL Balance</div><div class="card-value" id="solBalance">—</div><div class="card-sub">For fees</div></div>
       <div class="card"><div class="card-label">Contributors</div><div class="card-value" id="contribCount">0</div><div class="card-sub" id="contribSub">Team members</div></div>
       <div class="card"><div class="card-label">Total Payments</div><div class="card-value" id="payCount">0</div><div class="card-sub">All time</div></div>
+      <div class="card"><div class="card-label">Outstanding Advances</div><div class="card-value" id="advanceOutstanding">0.00 USDC</div><div class="card-sub" id="advanceOutstandingSub">No active advances</div></div>
+      <div class="card"><div class="card-label">Open Advances</div><div class="card-value" id="advanceCount">0</div><div class="card-sub">Across this team</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h3>🎬 Demo Flow</h3>
+        <div class="panel-actions">
+          <button class="icon-btn" onclick="renderDemoFlow();toast('Demo flow refreshed')">↻ Refresh</button>
+        </div>
+      </div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.5">
+        This is the clean Frontier path: connect treasury wallet, add a contributor, issue a real advance, run payroll with deduction, then show the updated outstanding balance and on-chain history.
+      </div>
+      <div id="demoTreasuryBanner" style="display:none;background:#0a2818;border:1px solid #065f46;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:13px;color:#6ee7b7">
+        ✓ Treasury wallet connected <span id="demoTreasuryAddr" style="color:#9ca3af;font-family:monospace;font-size:11px;margin-left:8px"></span>
+      </div>
+      <div id="demoFlowList"></div>
     </div>
 
     <!-- Analytics Panel -->
@@ -194,6 +212,19 @@
         </div>
       </div>
       <div id="contribList"><div class="empty-state">No contributors yet — add your first team member above.</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h3>💳 Yield Advances</h3>
+        <div class="panel-actions">
+          <button class="icon-btn" onclick="renderAdvances();toast('Advances refreshed')">↻ Refresh</button>
+        </div>
+      </div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.5">
+        Issue a real on-chain USDC advance from the connected treasury wallet. Paycheck tracks the outstanding balance and due date so the contractor flow stops being imaginary.
+      </div>
+      <div id="advanceList"><div class="empty-state">No advances issued yet.</div></div>
     </div>
 
     <!-- Revenue Streams Panel (Mode 3) -->
@@ -369,6 +400,8 @@
       <div class="field"><label>Wallet</label><input id="p_wallet" readonly style="font-family:monospace;font-size:11px;color:#6b7280"></div>
       <div class="field"><label>Amount (USDC)</label><input id="p_amount" type="number" placeholder="e.g. 500" min="0.01" step="0.01"></div>
       <div class="field"><label>Note</label><input id="p_note" placeholder="e.g. Week 1 payment" maxlength="50"></div>
+      <input type="hidden" id="p_auto_deduct" value="0">
+      <div id="p_deduct_hint" style="display:none;background:#0a0a0a;border:1px solid #1f2937;border-radius:10px;padding:12px;margin:12px 0;font-size:12px;color:#fcd34d"></div>
       <div class="tx-result" id="payTx">
         <p>Payment sent on Solana mainnet</p>
         <a id="payTxLink" href="#" target="_blank">View on Solscan</a>
@@ -380,9 +413,61 @@
     </div>
   </div>
 
+  <!-- Issue Advance Modal -->
+  <div class="modal" id="advanceModal">
+    <div class="modal-box">
+      <h3>Issue USDC Advance</h3>
+      <p>Send a real on-chain USDC advance from your connected treasury wallet. Paycheck will track the 14-day repayment amount locally.</p>
+      <input type="hidden" id="advanceIndex" value="-1">
+      <div class="field"><label>Contributor</label><input id="a_name" readonly style="color:#9ca3af"></div>
+      <div class="field"><label>Wallet</label><input id="a_wallet" readonly style="font-family:monospace;font-size:11px;color:#6b7280"></div>
+      <div class="field"><label>Advance amount (USDC)</label><input id="a_amount" type="number" placeholder="e.g. 50" min="0.01" step="0.01" oninput="updateAdvancePreview()"></div>
+      <div style="background:#0a0a0a;border:1px solid #1f2937;border-radius:10px;padding:16px;margin:12px 0">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0">
+          <div style="font-size:13px;color:#9ca3af">Repay amount</div>
+          <div id="a_due" style="font-weight:600;color:#6ee7b7">0.00 USDC</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid #1f2937">
+          <div style="font-size:13px;color:#9ca3af">Repayment window</div>
+          <div style="font-weight:600">14 days</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid #1f2937">
+          <div style="font-size:13px;color:#9ca3af">Current open balance</div>
+          <div id="a_open_balance" style="font-weight:600">0.00 USDC</div>
+        </div>
+      </div>
+      <div class="field"><label>Note</label><input id="a_note" placeholder="e.g. Week 1 contractor advance" maxlength="60"></div>
+      <div class="tx-result" id="advanceTx">
+        <p>Advance sent on Solana mainnet</p>
+        <a id="advanceTxLink" href="#" target="_blank">View on Solscan</a>
+      </div>
+      <div class="modal-btns">
+        <button class="modal-cancel" onclick="closeModal('advanceModal')">Close</button>
+        <button class="modal-submit" id="advanceBtn" onclick="issueAdvance()">Sign &amp; Send Advance</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Apply Repayment Modal -->
+  <div class="modal" id="repaymentModal">
+    <div class="modal-box">
+      <h3>Apply Advance Deduction</h3>
+      <p>This updates Paycheck's outstanding advance ledger. It does not create a new Solscan transaction by itself. Use it when payroll is withheld against an open advance.</p>
+      <input type="hidden" id="repayAdvanceId" value="">
+      <div class="field"><label>Contributor</label><input id="r_name" readonly style="color:#9ca3af"></div>
+      <div class="field"><label>Current outstanding</label><input id="r_outstanding" readonly style="color:#fcd34d"></div>
+      <div class="field"><label>Repayment amount (USDC)</label><input id="r_amount" type="number" placeholder="e.g. 10" min="0.01" step="0.01"></div>
+      <div class="field"><label>Note</label><input id="r_note" placeholder="e.g. Payroll deduction" maxlength="60"></div>
+      <div class="modal-btns">
+        <button class="modal-cancel" onclick="closeModal('repaymentModal')">Close</button>
+        <button class="modal-submit" onclick="applyRepayment()">Apply Deduction</button>
+      </div>
+    </div>
+  </div>
+
   <footer>
-    <p>Paycheck by White Claw — Built for Colosseum Frontier 2026</p>
-    <p style="margin-top:8px"><a href="https://twitter.com/whiteclawonsol">@whiteclawonsol</a> · $WCLAW</p>
+    <p>Paycheck by WCLAW — Built for Colosseum Frontier 2026</p>
+    <p style="margin-top:8px"><a href="https://twitter.com/wclawonsolana">@wclawonsolana</a> · $WCLAW</p>
   </footer>
   <div id="toast"></div>
   <div id="debugPanel"></div>
@@ -393,6 +478,8 @@ const TOKEN_PROG='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 const ASSOC_TOKEN_PROG='ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL';
 const MEMO_PROG='MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr';
 const RPC='https://mainnet.helius-rpc.com/?api-key=6d5df401-940b-40c6-a3ee-303b177b37a1';
+const ADVANCE_FEE_BPS=100;
+const ADVANCE_TERM_DAYS=14;
 
 // Derive Associated Token Account (ATA) for a wallet + mint
 async function deriveATA(walletPk,mintPk){
@@ -425,8 +512,197 @@ let teams=JSON.parse(localStorage.getItem('pc_teams')||'null');
 if(!teams){teams=[{id:'main',name:'Main Team',contribs:[],payments:[]}];localStorage.setItem('pc_teams',JSON.stringify(teams));}
 let activeTeamId=localStorage.getItem('pc_active')||teams[0].id;
 
-function getActiveTeam(){return teams.find(t=>t.id===activeTeamId)||teams[0];}
-function saveTeams(){localStorage.setItem('pc_teams',JSON.stringify(teams));localStorage.setItem('pc_active',activeTeamId);}
+function normalizeTeam(team){
+  if(!team.contribs)team.contribs=[];
+  if(!team.payments)team.payments=[];
+  if(!team.streams)team.streams=[];
+  if(!team.advances)team.advances=[];
+  return team;
+}
+
+teams=teams.map(normalizeTeam);
+
+function getActiveTeam(){return normalizeTeam(teams.find(t=>t.id===activeTeamId)||teams[0]);}
+function getWalletTeamMap(){
+  try{return JSON.parse(localStorage.getItem('pc_wallet_team_map')||'{}')||{};}
+  catch(e){return {};}
+}
+function rememberActiveTeamForWallet(wallet=pk){
+  if(!wallet||!activeTeamId)return;
+  const map=getWalletTeamMap();
+  map[wallet]=activeTeamId;
+  localStorage.setItem('pc_wallet_team_map',JSON.stringify(map));
+}
+function selectTeamForWallet(wallet=pk){
+  if(!wallet)return;
+  const map=getWalletTeamMap();
+  if(map[wallet]&&teams.find(t=>t.id===map[wallet])){
+    activeTeamId=map[wallet];
+    return;
+  }
+  const treasuryTeam=teams.find(t=>t.treasury===wallet);
+  if(treasuryTeam){activeTeamId=treasuryTeam.id;}
+}
+function saveTeams(){
+  localStorage.setItem('pc_teams',JSON.stringify(teams));
+  localStorage.setItem('pc_active',activeTeamId);
+  rememberActiveTeamForWallet();
+}
+
+function calcAdvanceDue(amount){
+  const n=Number(amount||0);
+  return Math.round((n*(1+ADVANCE_FEE_BPS/10000))*100)/100;
+}
+
+function round2(n){return Math.round(Number(n||0)*100)/100;}
+
+function getContributorGross(c){
+  if(!c||!c.r)return 0;
+  const rate=Number(c.r);
+  return c.p==='month'?rate/4:rate;
+}
+
+function getOpenAdvances(wallet){
+  const team=getActiveTeam();
+  return (team.advances||[]).filter(a=>a.wallet===wallet&&a.status==='open'&&Number(a.outstanding||0)>0);
+}
+
+function getOutstandingAdvance(wallet){
+  return getOpenAdvances(wallet).reduce((sum,a)=>sum+Number(a.outstanding||0),0);
+}
+
+function renderAdvanceSummary(){
+  const team=getActiveTeam();
+  const open=(team.advances||[]).filter(a=>a.status==='open'&&Number(a.outstanding||0)>0);
+  const outstanding=open.reduce((sum,a)=>sum+Number(a.outstanding||0),0);
+  document.getElementById('advanceOutstanding').textContent=outstanding.toFixed(2)+' USDC';
+  document.getElementById('advanceOutstandingSub').textContent=open.length?open.length+' active advance'+(open.length===1?'':'s'):'No active advances';
+  document.getElementById('advanceCount').textContent=open.length;
+}
+
+function renderDemoFlow(){
+  const team=getActiveTeam();
+  const open=(team.advances||[]).filter(a=>a.status==='open'&&Number(a.outstanding||0)>0);
+  const completedAdvance=(team.advances||[]).length>0;
+  const completedPayment=(team.payments||[]).some(p=>!(p.sig&&String(p.sig).startsWith('manual_')));
+  const banner=document.getElementById('demoTreasuryBanner');
+  const addr=document.getElementById('demoTreasuryAddr');
+  if(team.treasury){
+    banner.style.display='block';
+    addr.textContent=team.treasury.slice(0,8)+'...'+team.treasury.slice(-6);
+  }else{
+    banner.style.display='none';
+    addr.textContent='';
+  }
+  const items=[
+    {done:!!team.treasury,title:'Connect treasury wallet',detail:team.treasury?'Treasury captured for this team':'Connect your main treasury wallet first'},
+    {done:team.contribs.length>0,title:'Add contributor',detail:team.contribs.length?team.contribs.length+' contributor'+(team.contribs.length===1?'':'s')+' ready':'Create at least one contributor to demo payroll'},
+    {done:completedAdvance,title:'Issue advance',detail:completedAdvance?(team.advances||[]).length+' advance'+((team.advances||[]).length===1?'':'s')+' recorded':'Use the Advance button on a contributor to send a real USDC advance'},
+    {done:completedPayment,title:'Run payroll',detail:completedPayment?(team.payments||[]).filter(p=>!(p.sig&&String(p.sig).startsWith('manual_'))).length+' on-chain payment'+(((team.payments||[]).filter(p=>!(p.sig&&String(p.sig).startsWith('manual_'))).length===1)?'':'s')+' sent':'Use Send USDC or Run Payroll to send the paycheck'},
+    {done:completedAdvance,title:'Show updated balance',detail:completedAdvance?(open.length?open.length+' open advance'+(open.length===1?'':'s')+' still visible':'All advances repaid or closed'):'Outstanding balance card updates after advances and deductions'}
+  ];
+  document.getElementById('demoFlowList').innerHTML=items.map((item,idx)=>`<div style="display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid #111">
+    <div style="width:28px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:${item.done?'#065f46':'#111827'};color:${item.done?'#6ee7b7':'#9ca3af'}">${item.done?'✓':idx+1}</div>
+    <div style="flex:1">
+      <div style="font-weight:600;font-size:14px;color:${item.done?'#fff':'#d1d5db'}">${item.title}</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:4px;line-height:1.5">${item.detail}</div>
+    </div>
+  </div>`).join('');
+}
+
+function renderAdvances(){
+  const team=getActiveTeam();
+  const list=document.getElementById('advanceList');
+  const advances=(team.advances||[]).slice().sort((a,b)=>(b.issuedAt||0)-(a.issuedAt||0));
+  if(!advances.length){
+    list.innerHTML='<div class="empty-state">No advances issued yet.</div>';
+    return;
+  }
+  list.innerHTML=advances.map(a=>{
+    const status=a.status==='open'&&Number(a.outstanding||0)>0?'Open':'Closed';
+    const due=new Date(a.dueAt||Date.now()).toLocaleDateString();
+    return `<div class="activity-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+        <div>
+          <div><span style="color:#6ee7b7;font-weight:600">${Number(a.principal||0).toFixed(2)} USDC</span> <span style="color:#d1d5db">to ${a.name}</span> <span style="color:${status==='Open'?'#fcd34d':'#6b7280'};font-size:11px">• ${status}</span></div>
+          <div style="color:#6b7280;font-size:11px;margin-top:4px">Outstanding ${Number(a.outstanding||0).toFixed(2)} USDC • Due ${due}</div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            ${status==='Open'?`<button class="edit-btn" onclick="openRepayment('${a.id}')">Apply deduction</button>`:''}
+            <span style="color:#6b7280;font-size:11px;align-self:center">deduction is app ledger, not a Solscan tx</span>
+            ${a.issueSig?`<a href="https://solscan.io/tx/${a.issueSig}" target="_blank" style="color:#34d399;font-size:11px;font-family:monospace;text-decoration:none;align-self:center">${a.issueSig.slice(0,8)}... ↗</a>`:''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function findAdvanceById(id){
+  const team=getActiveTeam();
+  return (team.advances||[]).find(a=>a.id===id);
+}
+
+function applyAdvanceRepaymentByWallet(wallet,amount,meta={}){
+  let remaining=round2(amount);
+  if(remaining<=0)return 0;
+  const team=getActiveTeam();
+  const open=(team.advances||[])
+    .filter(a=>a.wallet===wallet&&a.status==='open'&&Number(a.outstanding||0)>0)
+    .sort((a,b)=>(a.issuedAt||0)-(b.issuedAt||0));
+  let appliedTotal=0;
+  open.forEach(advance=>{
+    if(remaining<=0)return;
+    const outstanding=round2(advance.outstanding||0);
+    const applied=Math.min(outstanding,remaining);
+    advance.outstanding=round2(outstanding-applied);
+    advance.status=advance.outstanding>0?'open':'closed';
+    if(!advance.repayments)advance.repayments=[];
+    advance.repayments.push({
+      amount:applied,
+      ts:Date.now(),
+      note:meta.note||'Advance repayment',
+      source:meta.source||'manual',
+      sig:meta.sig||null
+    });
+    appliedTotal=round2(appliedTotal+applied);
+    remaining=round2(remaining-applied);
+  });
+  return appliedTotal;
+}
+
+function openRepaymentForWallet(wallet){
+  const first=getOpenAdvances(wallet)[0];
+  if(!first){toast('No open advance for this contributor',1);return}
+  openRepayment(first.id);
+}
+
+function openRepayment(id){
+  const advance=findAdvanceById(id);
+  if(!advance){toast('Advance not found',1);return}
+  document.getElementById('repayAdvanceId').value=id;
+  document.getElementById('r_name').value=advance.name;
+  document.getElementById('r_outstanding').value=Number(advance.outstanding||0).toFixed(2)+' USDC';
+  document.getElementById('r_amount').value=Math.min(Number(advance.outstanding||0), 10).toFixed(2);
+  document.getElementById('r_note').value='Payroll deduction';
+  document.getElementById('repaymentModal').classList.add('open');
+}
+
+function applyRepayment(){
+  const id=document.getElementById('repayAdvanceId').value;
+  const advance=findAdvanceById(id);
+  if(!advance){toast('Advance not found',1);return}
+  const amount=parseFloat(document.getElementById('r_amount').value);
+  if(!amount||amount<=0){toast('Enter a valid repayment amount',1);return}
+  const applied=Math.min(amount,Number(advance.outstanding||0));
+  const note=(document.getElementById('r_note').value||'Advance repayment').trim();
+  applyAdvanceRepaymentByWallet(advance.wallet,applied,{note,source:'manual'});
+  const team=getActiveTeam();
+  team.payments.unshift({amount:applied,name:advance.name,note:'Advance repayment: '+note,sig:'manual_'+Date.now(),ts:Date.now()});
+  saveTeams();
+  renderC();renderPayments();renderAdvanceSummary();renderAdvances();renderDemoFlow();
+  closeModal('repaymentModal');
+  toast(nextOutstanding>0?'Repayment applied':'Advance fully repaid');
+}
 function dbg(msg,level){
   const p=document.getElementById('debugPanel');
   const d=document.createElement('div');
@@ -455,6 +731,7 @@ function onConn(){
   document.getElementById('heroSection').style.display='none';
   document.getElementById('dashboard').classList.add('visible');
   document.getElementById('teamSwitcher').style.display='flex';
+  selectTeamForWallet(pk);
   dbg('Wallet connected: '+s,'ok');
 
   // Identify whether this is the treasury wallet or a revenue wallet
@@ -485,10 +762,9 @@ async function fetchBalances(){
 
 function renderAll(){
   const team=getActiveTeam();
-  if(!team.streams)team.streams=[];
   document.getElementById('teamName').textContent=team.name;
   document.getElementById('teamTitle').textContent=team.name+' — Members';
-  renderC();renderPayments();updateAnalytics();renderStreams();
+  renderC();renderPayments();updateAnalytics();renderStreams();renderAdvanceSummary();renderAdvances();renderDemoFlow();
 }
 
 // ========== Revenue Streams (Mode 3) ==========
@@ -851,7 +1127,7 @@ function importTeamData(event){
       const data=JSON.parse(e.target.result);
       if(!data.teams||!Array.isArray(data.teams)){throw new Error('Invalid backup file')}
       if(!confirm(`Restore ${data.teams.length} team(s)? This replaces current data.`))return;
-      teams=data.teams;
+      teams=data.teams.map(normalizeTeam);
       activeTeamId=data.activeTeamId||teams[0].id;
       saveTeams();renderAll();
       toast('Imported '+data.teams.length+' team(s)');
@@ -945,11 +1221,14 @@ function renderC(){
         <div>
           <div class="contrib-name">${c.n}${c.role?' <span style="color:#6b7280;font-weight:400;font-size:12px">• '+c.role+'</span>':''}</div>
           <div class="contrib-wallet">${c.w.slice(0,8)}...${c.w.slice(-6)}</div>
+          ${getOutstandingAdvance(c.w)>0?`<div style="font-size:11px;color:#fcd34d;margin-top:4px">Outstanding advance: ${getOutstandingAdvance(c.w).toFixed(2)} USDC</div>`:''}
         </div>
       </div>
       <div class="contrib-actions">
         ${c.r?`<div class="contrib-rate">${Number(c.r).toLocaleString()} USDC/${c.p==='day'?'day':c.p==='week'?'wk':c.p==='biweek'?'2wk':'mo'}</div>`:''}
         <button class="edit-btn" onclick="openEdit(${i})" title="Edit">✎</button>
+        ${getOutstandingAdvance(c.w)>0?`<button class="edit-btn" onclick="openRepaymentForWallet('${c.w}')" title="Apply payroll deduction">Deduct</button>`:''}
+        <button class="edit-btn" onclick="openAdvance(${i})" title="Issue advance">Advance</button>
         <button class="pay-btn" onclick="openPay(${i})">Send USDC</button>
       </div>
     </div>`).join('');
@@ -963,10 +1242,13 @@ function renderPayments(){
   if(!team.payments.length){l.innerHTML='<div class="empty-state">No payments yet. Send your first USDC payment above.</div>';return}
   l.innerHTML=team.payments.map(p=>{
     const ts=new Date(p.ts).toLocaleString();
+    const txLink=p.sig&&String(p.sig).startsWith('manual_')
+      ? '<span style="color:#6b7280;font-size:11px">manual entry</span>'
+      : `<a href="https://solscan.io/tx/${p.sig}" target="_blank" style="color:#34d399;font-size:11px;font-family:monospace;text-decoration:none">${p.sig.slice(0,8)}... ↗</a>`;
     return `<div class="activity-item">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div><span style="color:#6ee7b7;font-weight:600">${p.amount} USDC</span> <span style="color:#d1d5db">to ${p.name}</span>${p.note?' <span style="color:#6b7280;font-size:11px">• '+p.note+'</span>':''}</div>
-        <a href="https://solscan.io/tx/${p.sig}" target="_blank" style="color:#34d399;font-size:11px;font-family:monospace;text-decoration:none">${p.sig.slice(0,8)}... ↗</a>
+        ${txLink}
       </div>
       <div style="color:#4b5563;font-size:11px;margin-top:4px">${ts}</div>
     </div>`;
@@ -1062,7 +1344,7 @@ function openReport(){
       <button class="btn btn-sec" onclick="window.close()">Close</button>
     </div>
     <div class="hdr">
-      <div class="brand">Paycheck by White Claw<br>paycheck.vercel.app</div>
+      <div class="brand">Paycheck by WCLAW<br>paycheck.vercel.app</div>
       <h1>Payroll Report</h1>
       <div class="sub"><strong>${team.name}</strong> — Generated ${reportDate}</div>
     </div>
@@ -1122,9 +1404,9 @@ function openReport(){
     </div>
 
     <div class="footer">
-      Paycheck by White Claw — Stablecoin payroll with yield-powered advances on Solana<br>
+      Paycheck by WCLAW — Stablecoin payroll with yield-powered advances on Solana<br>
       Every payment verifiable on <a href="https://solscan.io/" style="color:#059669">Solscan</a> — Report generated from on-chain data<br>
-      <strong>$WCLAW</strong> • @whiteclawonsol
+      <strong>$WCLAW</strong> • @wclawonsolana
     </div>
   </body></html>`;
 
@@ -1153,13 +1435,20 @@ function openBatchPay(){
   batchSelections={};
   list.innerHTML=team.contribs.map((c,i)=>{
     let defaultAmount='';
-    if(c.r){const rate=Number(c.r);defaultAmount=c.p==='month'?(rate/4).toFixed(2):rate.toFixed(2);}
+    if(c.r){
+      const rate=Number(c.r);
+      const gross=c.p==='month'?(rate/4):rate;
+      const outstanding=getOutstandingAdvance(c.w);
+      defaultAmount=Math.max(0,gross-outstanding).toFixed(2);
+    }
     batchSelections[i]={selected:!!c.r,amount:defaultAmount};
+    const outstanding=getOutstandingAdvance(c.w);
     return `<div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #1f2937;border-radius:8px;margin-bottom:8px">
       <input type="checkbox" ${c.r?'checked':''} onchange="toggleBatch(${i},this.checked)" style="width:18px;height:18px;accent-color:#6ee7b7;cursor:pointer">
       <div style="flex:1">
         <div style="font-weight:600;font-size:14px">${c.n}${c.role?' <span style="color:#6b7280;font-weight:400;font-size:11px">• '+c.role+'</span>':''}</div>
         <div style="font-size:11px;color:#6b7280;font-family:monospace;margin-top:2px">${c.w.slice(0,8)}...${c.w.slice(-6)}</div>
+        ${outstanding>0?`<div style="font-size:11px;color:#fcd34d;margin-top:4px">Open advance ${outstanding.toFixed(2)} USDC, net pay prefilled</div>`:''}
       </div>
       <div style="display:flex;align-items:center;gap:4px">
         <input type="number" value="${defaultAmount}" onchange="updateBatchAmount(${i},this.value)" placeholder="0.00" style="width:90px;background:#111;border:1px solid #1f2937;color:#fff;padding:8px 10px;border-radius:6px;font-size:13px;text-align:right">
@@ -1206,11 +1495,21 @@ async function runBatchPay(){
     btn.textContent=`Processing ${idx+1}/${toPay.length}...`;
     progress.innerHTML+=`<br><br>⏳ <strong>${c.n}</strong> — ${amount} USDC (approve in Phantom...)`;
     try{
+      const outstandingBefore=getOutstandingAdvance(c.w);
+      const gross=getContributorGross(c);
+      const deduction=round2(Math.min(outstandingBefore,Math.max(0,gross-amount)));
       const sig=await sendOneUSDC(c.w,c.n,amount,'Payroll run '+new Date().toLocaleDateString());
       if(sig){
+        if(deduction>0){
+          applyAdvanceRepaymentByWallet(c.w,deduction,{note:'Payroll deduction',source:'batch_payroll',sig});
+          saveTeams();
+        }
         successCount++;
         progress.innerHTML+=`<br>&nbsp;&nbsp;✓ Sent: <a href="https://solscan.io/tx/${sig}" target="_blank" style="color:#34d399;text-decoration:none;font-family:monospace;font-size:11px">${sig.slice(0,12)}...</a>`;
-        renderPayments();updateAnalytics();
+        if(deduction>0){
+          progress.innerHTML+=`<br>&nbsp;&nbsp;<span style="color:#fcd34d">Applied ${deduction.toFixed(2)} USDC advance deduction</span>`;
+        }
+        renderPayments();updateAnalytics();renderAdvanceSummary();renderAdvances();renderC();renderDemoFlow();
         // Small delay between tx to let Phantom reset state
         if(idx<toPay.length-1){
           progress.innerHTML+=`<br>&nbsp;&nbsp;<span style="color:#6b7280">Preparing next payment...</span>`;
@@ -1243,7 +1542,7 @@ async function runBatchPay(){
   fetchBalances();renderPayments();updateAnalytics();
 }
 
-async function sendOneUSDC(recipient,name,amount,note){
+async function sendOneUSDC(recipient,name,amount,note,opts={}){
   const prov=window.phantom?.solana||window.solana;
   const conn=new solanaWeb3.Connection(RPC,'confirmed');
   const senderPk=new solanaWeb3.PublicKey(pk);
@@ -1294,8 +1593,10 @@ async function sendOneUSDC(recipient,name,amount,note){
   const {signature}=await prov.signAndSendTransaction(tx);
 
   const team=getActiveTeam();
-  team.payments.unshift({amount,name,note,sig:signature,ts:Date.now()});
-  saveTeams();
+  if(!opts.skipPaymentLog){
+    team.payments.unshift({amount,name,note,sig:signature,ts:Date.now()});
+    saveTeams();
+  }
   return signature;
 }
 
@@ -1326,7 +1627,7 @@ function createTeam(){
   const name=document.getElementById('newTeamName').value.trim();
   if(!name){toast('Enter a team name',1);return}
   const id='team_'+Date.now();
-  teams.push({id,name,contribs:[],payments:[]});
+  teams.push({id,name,contribs:[],payments:[],streams:[],advances:[]});
   activeTeamId=id;saveTeams();renderAll();closeModal('teamModal');
   document.getElementById('newTeamName').value='';
   toast('Created '+name);
@@ -1399,12 +1700,91 @@ function openPay(i){
   document.getElementById('p_name').value=c.n;
   document.getElementById('p_wallet').value=c.w;
   let suggested='';
-  if(c.r){const rate=Number(c.r);suggested=c.p==='month'?(rate/4).toFixed(2):rate.toFixed(2);}
+  const outstanding=getOutstandingAdvance(c.w);
+  const gross=getContributorGross(c);
+  if(gross){
+    suggested=Math.max(0,gross-outstanding).toFixed(2);
+  }
   document.getElementById('p_amount').value=suggested;
-  document.getElementById('p_note').value='';
+  document.getElementById('p_note').value=outstanding>0?`Payroll after ${outstanding.toFixed(2)} advance deduction`:'';
+  document.getElementById('p_auto_deduct').value=(outstanding>0&&gross>0)?'1':'0';
+  const hint=document.getElementById('p_deduct_hint');
+  if(outstanding>0&&gross>0){
+    const deduction=round2(Math.min(outstanding,gross-Math.max(0,Number(suggested)||0)));
+    hint.style.display='block';
+    hint.textContent=`This payroll will auto-apply ${deduction.toFixed(2)} USDC toward ${c.n}'s open advance after the payment is sent.`;
+  }else{
+    hint.style.display='none';
+    hint.textContent='';
+  }
   document.getElementById('payTx').classList.remove('show');
   const btn=document.getElementById('payBtn');btn.disabled=false;btn.textContent='Sign & Send USDC';
   document.getElementById('payModal').classList.add('open');
+}
+
+function openAdvance(i){
+  const team=getActiveTeam();
+  const c=team.contribs[i];
+  document.getElementById('advanceIndex').value=i;
+  document.getElementById('a_name').value=c.n;
+  document.getElementById('a_wallet').value=c.w;
+  const suggested=c.r?Math.max(25,Math.round(Number(c.r)*0.25*100)/100):50;
+  document.getElementById('a_amount').value=suggested;
+  document.getElementById('a_note').value='14-day payroll advance';
+  document.getElementById('a_open_balance').textContent=getOutstandingAdvance(c.w).toFixed(2)+' USDC';
+  document.getElementById('advanceTx').classList.remove('show');
+  const btn=document.getElementById('advanceBtn');btn.disabled=false;btn.textContent='Sign & Send Advance';
+  updateAdvancePreview();
+  document.getElementById('advanceModal').classList.add('open');
+}
+
+function updateAdvancePreview(){
+  const amount=parseFloat(document.getElementById('a_amount').value||'0');
+  document.getElementById('a_due').textContent=calcAdvanceDue(amount).toFixed(2)+' USDC';
+}
+
+async function issueAdvance(){
+  const idx=Number(document.getElementById('advanceIndex').value);
+  const team=getActiveTeam();
+  const c=team.contribs[idx];
+  if(!c){toast('Contributor not found',1);return}
+  if(team.treasury&&pk!==team.treasury){toast('Connect the treasury wallet to issue advances',1);return}
+  const amount=parseFloat(document.getElementById('a_amount').value);
+  if(!amount||amount<=0){toast('Enter a valid amount',1);return}
+  const note=(document.getElementById('a_note').value||'14-day payroll advance').trim();
+  const btn=document.getElementById('advanceBtn');
+  btn.disabled=true;btn.textContent='Sending advance...';
+  try{
+    const sig=await sendOneUSDC(c.w,c.n,amount,note,{skipPaymentLog:true});
+    const dueAmount=calcAdvanceDue(amount);
+    team.advances.unshift({
+      id:'adv_'+Date.now(),
+      wallet:c.w,
+      name:c.n,
+      principal:Number(amount.toFixed(2)),
+      dueAmount:Number(dueAmount.toFixed(2)),
+      outstanding:Number(dueAmount.toFixed(2)),
+      issuedAt:Date.now(),
+      dueAt:Date.now()+(ADVANCE_TERM_DAYS*24*60*60*1000),
+      issueSig:sig,
+      note,
+      status:'open'
+    });
+    saveTeams();
+    renderC();renderAdvanceSummary();renderAdvances();renderDemoFlow();
+    document.getElementById('advanceTxLink').href='https://solscan.io/tx/'+sig;
+    document.getElementById('advanceTxLink').textContent=sig.slice(0,20)+'... View on Solscan';
+    document.getElementById('advanceTx').classList.add('show');
+    btn.textContent='Advance sent';
+    toast('Advance sent to '+c.n);
+    fetchBalances();
+    setTimeout(function(){closeModal('advanceModal');},2500);
+  }catch(e){
+    btn.disabled=false;btn.textContent='Sign & Send Advance';
+    const m=e.message||'';
+    if(m.includes('rejected')||m.includes('User'))toast('Cancelled',1);
+    else toast('Advance failed: '+m.slice(0,100),1);
+  }
 }
 
 async function sendUSDC(){
@@ -1412,6 +1792,7 @@ async function sendUSDC(){
   const name=document.getElementById('p_name').value;
   const amount=parseFloat(document.getElementById('p_amount').value);
   const note=document.getElementById('p_note').value||'Paycheck payment';
+  const autoDeduct=document.getElementById('p_auto_deduct').value==='1';
   if(!amount||amount<=0){toast('Enter a valid amount',1);return}
   const btn=document.getElementById('payBtn');
   btn.disabled=true;btn.textContent='Checking accounts...';
@@ -1475,7 +1856,15 @@ async function sendUSDC(){
 
     const team=getActiveTeam();
     team.payments.unshift({amount,name,note,sig:signature,ts:Date.now()});
-    saveTeams();renderPayments();
+    if(autoDeduct){
+      const c=team.contribs.find(x=>x.w===recipient);
+      const gross=getContributorGross(c);
+      const deduction=round2(Math.max(0,gross-amount));
+      if(deduction>0){
+        applyAdvanceRepaymentByWallet(recipient,deduction,{note:'Payroll deduction',source:'payroll',sig:signature});
+      }
+    }
+    saveTeams();renderPayments();renderAdvanceSummary();renderAdvances();renderC();renderDemoFlow();
 
     toast('Sent '+amount+' USDC to '+name);fetchBalances();
     setTimeout(function(){closeModal('payModal');},2500);

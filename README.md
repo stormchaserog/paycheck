@@ -1,10 +1,10 @@
-# Paycheck by White Claw
+# Paycheck by WCLAW
 
 **Stablecoin payroll with yield-powered advances for crypto-native teams.**
 
 🔗 Live: **https://paycheck.whiteclaw.dev**
 🏢 Company: **https://whiteclaw.dev**
-🐦 Follow: [@whiteclawonsol](https://twitter.com/whiteclawonsol)
+🐦 Follow: [@wclawonsolana](https://twitter.com/wclawonsolana)
 💎 Token: **$WCLAW** on Solana
 🏆 Built for [Colosseum Frontier 2026](https://colosseum.com/frontier)
 
@@ -35,6 +35,6 @@ Most crypto teams still run payroll manually — pasting wallet addresses into P
 - **Helius** RPC
 - Pure HTML/JS — no framework, ships instantly
 
-## White Claw
+## WCLAW
 
-White Claw is a crypto-native fintech company. Paycheck is the first product. More to come.
+WCLAW is a crypto-native fintech company. Paycheck is the first product. More to come.
