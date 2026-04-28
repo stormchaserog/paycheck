@@ -227,6 +227,20 @@
       <div id="advanceList"><div class="empty-state">No advances issued yet.</div></div>
     </div>
 
+    <div class="panel">
+      <div class="panel-header">
+        <h3>⏰ Scheduled Payments</h3>
+        <div class="panel-actions">
+          <button class="icon-btn" onclick="renderSchedules();toast('Schedule refreshed')">↻ Refresh</button>
+          <button class="add-btn" onclick="openDueBatchPay()">Approve Due Payroll</button>
+        </div>
+      </div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.5">
+        Lightweight recurring payroll: set each contributor's cadence, see who is due, then approve the batch from Phantom. No custody, no fake auto-pay claims.
+      </div>
+      <div id="scheduleList"><div class="empty-state">No scheduled payments yet.</div></div>
+    </div>
+
     <!-- Revenue Streams Panel (Mode 3) -->
     <div class="panel">
       <div class="panel-header">
@@ -281,6 +295,10 @@
       <div class="field" style="display:flex;gap:8px">
         <div style="flex:2"><label>Rate (USDC)</label><input id="c_rate" type="number" placeholder="e.g. 500"></div>
         <div style="flex:1"><label>Per</label><select id="c_period"><option value="week">Week</option><option value="day">Day</option><option value="biweek">Biweekly</option><option value="month">Month</option></select></div>
+      </div>
+      <div class="field" style="display:flex;gap:8px">
+        <div style="flex:1"><label>Schedule</label><select id="c_schedule"><option value="none">Not scheduled</option><option value="weekly">Weekly</option><option value="biweekly">Biweekly</option><option value="monthly">Monthly</option></select></div>
+        <div style="flex:1"><label>Next Pay Date</label><input id="c_next_due" type="date"></div>
       </div>
       <div class="field"><label>Role (Optional)</label><input id="c_role" placeholder="e.g. Developer, Designer, Community"></div>
       <button class="modal-danger" id="deleteBtn" onclick="deleteContrib()" style="display:none">Remove from Team</button>
@@ -571,6 +589,84 @@ function getOutstandingAdvance(wallet){
   return getOpenAdvances(wallet).reduce((sum,a)=>sum+Number(a.outstanding||0),0);
 }
 
+function dateInputValue(daysFromNow=0){
+  const d=new Date();
+  d.setDate(d.getDate()+daysFromNow);
+  return d.toISOString().slice(0,10);
+}
+
+function parseDueDate(value){
+  if(!value)return null;
+  const d=new Date(value+'T12:00:00');
+  return Number.isNaN(d.getTime())?null:d;
+}
+
+function daysUntilDue(value){
+  const d=parseDueDate(value);
+  if(!d)return null;
+  const today=new Date();
+  today.setHours(0,0,0,0);
+  d.setHours(0,0,0,0);
+  return Math.ceil((d-today)/86400000);
+}
+
+function formatDueLabel(value){
+  const d=parseDueDate(value);
+  if(!d)return 'No date set';
+  const days=daysUntilDue(value);
+  const date=d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  if(days<0)return `${date} • overdue by ${Math.abs(days)} day${Math.abs(days)===1?'':'s'}`;
+  if(days===0)return `${date} • due today`;
+  if(days===1)return `${date} • due tomorrow`;
+  return `${date} • due in ${days} days`;
+}
+
+function advanceScheduleDate(value,cadence){
+  const d=parseDueDate(value)||new Date();
+  if(cadence==='weekly')d.setDate(d.getDate()+7);
+  else if(cadence==='biweekly')d.setDate(d.getDate()+14);
+  else if(cadence==='monthly')d.setMonth(d.getMonth()+1);
+  else return value||'';
+  return d.toISOString().slice(0,10);
+}
+
+function isScheduledDue(c){
+  return c&&c.schedule&&c.schedule!=='none'&&c.nextDue&&daysUntilDue(c.nextDue)<=0;
+}
+
+function renderSchedules(){
+  const team=getActiveTeam();
+  const list=document.getElementById('scheduleList');
+  const scheduled=team.contribs
+    .map((c,i)=>({c,i,days:daysUntilDue(c.nextDue)}))
+    .filter(x=>x.c.schedule&&x.c.schedule!=='none')
+    .sort((a,b)=>(a.days??9999)-(b.days??9999));
+  if(!scheduled.length){
+    list.innerHTML='<div class="empty-state">No scheduled payments yet. Edit a contributor and set Schedule + Next Pay Date.</div>';
+    return;
+  }
+  list.innerHTML=scheduled.map(({c,i,days})=>{
+    const due=days!==null&&days<=0;
+    const dueSoon=days!==null&&days<=1;
+    const gross=getContributorGross(c);
+    const outstanding=getOutstandingAdvance(c.w);
+    const net=Math.max(0,gross-outstanding);
+    return `<div class="activity-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+        <div>
+          <div><span style="font-weight:600;color:#fff">${c.n}</span> <span style="color:${due?'#fca5a5':dueSoon?'#fcd34d':'#6b7280'};font-size:11px">• ${formatDueLabel(c.nextDue)}</span></div>
+          <div style="font-size:11px;color:#6b7280;margin-top:4px">${c.schedule} payroll • gross ${gross.toFixed(2)} USDC${outstanding>0?` • net ${net.toFixed(2)} after ${outstanding.toFixed(2)} advance`:''}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${dueSoon?'<span style="font-size:11px;color:#fcd34d">⏰ Due soon</span>':''}
+          <button class="edit-btn" onclick="openEdit(${i})">Edit</button>
+          <button class="pay-btn" onclick="openPay(${i})">Pay</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function renderAdvanceSummary(){
   const team=getActiveTeam();
   const open=(team.advances||[]).filter(a=>a.status==='open'&&Number(a.outstanding||0)>0);
@@ -699,9 +795,9 @@ function applyRepayment(){
   const team=getActiveTeam();
   team.payments.unshift({amount:applied,name:advance.name,note:'Advance repayment: '+note,sig:'manual_'+Date.now(),ts:Date.now()});
   saveTeams();
-  renderC();renderPayments();renderAdvanceSummary();renderAdvances();renderDemoFlow();
+  renderC();renderPayments();renderAdvanceSummary();renderAdvances();renderSchedules();renderDemoFlow();
   closeModal('repaymentModal');
-  toast(nextOutstanding>0?'Repayment applied':'Advance fully repaid');
+  toast(Number(advance.outstanding||0)>0?'Repayment applied':'Advance fully repaid');
 }
 function dbg(msg,level){
   const p=document.getElementById('debugPanel');
@@ -764,7 +860,7 @@ function renderAll(){
   const team=getActiveTeam();
   document.getElementById('teamName').textContent=team.name;
   document.getElementById('teamTitle').textContent=team.name+' — Members';
-  renderC();renderPayments();updateAnalytics();renderStreams();renderAdvanceSummary();renderAdvances();renderDemoFlow();
+  renderC();renderPayments();updateAnalytics();renderStreams();renderAdvanceSummary();renderAdvances();renderSchedules();renderDemoFlow();
 }
 
 // ========== Revenue Streams (Mode 3) ==========
@@ -1221,6 +1317,7 @@ function renderC(){
         <div>
           <div class="contrib-name">${c.n}${c.role?' <span style="color:#6b7280;font-weight:400;font-size:12px">• '+c.role+'</span>':''}</div>
           <div class="contrib-wallet">${c.w.slice(0,8)}...${c.w.slice(-6)}</div>
+          ${c.schedule&&c.schedule!=='none'?`<div style="font-size:11px;color:${isScheduledDue(c)?'#fcd34d':'#6b7280'};margin-top:4px">${isScheduledDue(c)?'⏰ Due now':'Scheduled'}: ${formatDueLabel(c.nextDue)}</div>`:''}
           ${getOutstandingAdvance(c.w)>0?`<div style="font-size:11px;color:#fcd34d;margin-top:4px">Outstanding advance: ${getOutstandingAdvance(c.w).toFixed(2)} USDC</div>`:''}
         </div>
       </div>
@@ -1462,6 +1559,16 @@ function openBatchPay(){
   document.getElementById('batchModal').classList.add('open');
 }
 
+function openDueBatchPay(){
+  const team=getActiveTeam();
+  const dueIdx=team.contribs.map((c,i)=>isScheduledDue(c)?i:null).filter(i=>i!==null);
+  if(!dueIdx.length){toast('No scheduled payments due yet',1);return}
+  openBatchPay();
+  Object.keys(batchSelections).forEach(i=>{batchSelections[i].selected=dueIdx.includes(Number(i));});
+  document.querySelectorAll('#batchList input[type="checkbox"]').forEach((box,idx)=>{box.checked=!!batchSelections[idx]?.selected;});
+  updateBatchSummary();
+}
+
 function toggleBatch(i,checked){batchSelections[i].selected=checked;updateBatchSummary();}
 function updateBatchAmount(i,val){batchSelections[i].amount=val;updateBatchSummary();}
 
@@ -1504,12 +1611,16 @@ async function runBatchPay(){
           applyAdvanceRepaymentByWallet(c.w,deduction,{note:'Payroll deduction',source:'batch_payroll',sig});
           saveTeams();
         }
+        if(c.schedule&&c.schedule!=='none'&&c.nextDue){
+          c.nextDue=advanceScheduleDate(c.nextDue,c.schedule);
+          saveTeams();
+        }
         successCount++;
         progress.innerHTML+=`<br>&nbsp;&nbsp;✓ Sent: <a href="https://solscan.io/tx/${sig}" target="_blank" style="color:#34d399;text-decoration:none;font-family:monospace;font-size:11px">${sig.slice(0,12)}...</a>`;
         if(deduction>0){
           progress.innerHTML+=`<br>&nbsp;&nbsp;<span style="color:#fcd34d">Applied ${deduction.toFixed(2)} USDC advance deduction</span>`;
         }
-        renderPayments();updateAnalytics();renderAdvanceSummary();renderAdvances();renderC();renderDemoFlow();
+        renderPayments();updateAnalytics();renderAdvanceSummary();renderAdvances();renderC();renderSchedules();renderDemoFlow();
         // Small delay between tx to let Phantom reset state
         if(idx<toPay.length-1){
           progress.innerHTML+=`<br>&nbsp;&nbsp;<span style="color:#6b7280">Preparing next payment...</span>`;
@@ -1539,7 +1650,7 @@ async function runBatchPay(){
   btn.onclick=function(){closeModal('batchModal');btn.onclick=function(){runBatchPay();};btn.textContent='Start Payroll Run';};
   progress.innerHTML+=`<br><br><strong>Payroll complete: ${successCount} paid, ${failCount} failed</strong>`;
   toast(`Payroll run: ${successCount}/${toPay.length} successful`);
-  fetchBalances();renderPayments();updateAnalytics();
+  fetchBalances();renderPayments();updateAnalytics();renderSchedules();
 }
 
 async function sendOneUSDC(recipient,name,amount,note,opts={}){
@@ -1650,6 +1761,8 @@ function openAdd(){
   document.getElementById('c_wallet').value='';
   document.getElementById('c_rate').value='';
   document.getElementById('c_period').value='week';
+  document.getElementById('c_schedule').value='none';
+  document.getElementById('c_next_due').value=dateInputValue(7);
   document.getElementById('c_role').value='';
   document.getElementById('deleteBtn').style.display='none';
   document.getElementById('addModal').classList.add('open');
@@ -1664,6 +1777,8 @@ function openEdit(i){
   document.getElementById('c_wallet').value=c.w;
   document.getElementById('c_rate').value=c.r||'';
   document.getElementById('c_period').value=c.p||'week';
+  document.getElementById('c_schedule').value=c.schedule||'none';
+  document.getElementById('c_next_due').value=c.nextDue||dateInputValue(7);
   document.getElementById('c_role').value=c.role||'';
   document.getElementById('deleteBtn').style.display='block';
   document.getElementById('addModal').classList.add('open');
@@ -1674,16 +1789,18 @@ function saveContrib(){
   const w=document.getElementById('c_wallet').value.trim();
   const r=document.getElementById('c_rate').value;
   const p=document.getElementById('c_period').value;
+  const schedule=document.getElementById('c_schedule').value;
+  const nextDue=document.getElementById('c_next_due').value;
   const role=document.getElementById('c_role').value.trim();
   const idx=parseInt(document.getElementById('editIndex').value);
   if(!n){toast('Enter a name',1);return}
   if(!w||w.length<32){toast('Enter a valid wallet address',1);return}
   try{new solanaWeb3.PublicKey(w)}catch(e){toast('Invalid wallet address',1);return}
   const team=getActiveTeam();
-  const entry={n,w,r,p,role};
+  const entry={n,w,r,p,role,schedule,nextDue:schedule==='none'?'':nextDue};
   if(idx>=0){team.contribs[idx]=entry;toast(n+' updated');}
   else{team.contribs.push(entry);toast(n+' added');}
-  saveTeams();closeModal('addModal');renderC();
+  saveTeams();closeModal('addModal');renderC();renderSchedules();
 }
 
 function deleteContrib(){
@@ -1856,15 +1973,19 @@ async function sendUSDC(){
 
     const team=getActiveTeam();
     team.payments.unshift({amount,name,note,sig:signature,ts:Date.now()});
+    const scheduledContributor=team.contribs.find(x=>x.w===recipient);
     if(autoDeduct){
-      const c=team.contribs.find(x=>x.w===recipient);
+      const c=scheduledContributor;
       const gross=getContributorGross(c);
       const deduction=round2(Math.max(0,gross-amount));
       if(deduction>0){
         applyAdvanceRepaymentByWallet(recipient,deduction,{note:'Payroll deduction',source:'payroll',sig:signature});
       }
     }
-    saveTeams();renderPayments();renderAdvanceSummary();renderAdvances();renderC();renderDemoFlow();
+    if(scheduledContributor&&isScheduledDue(scheduledContributor)){
+      scheduledContributor.nextDue=advanceScheduleDate(scheduledContributor.nextDue,scheduledContributor.schedule);
+    }
+    saveTeams();renderPayments();renderAdvanceSummary();renderAdvances();renderC();renderSchedules();renderDemoFlow();
 
     toast('Sent '+amount+' USDC to '+name);fetchBalances();
     setTimeout(function(){closeModal('payModal');},2500);
