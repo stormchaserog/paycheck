@@ -127,6 +127,7 @@
       <p class="hero-body">One rail for every payment an onchain company makes. Pay contributors in seconds, route pump.fun/Meteora/Raydium rewards to the team, let contributors advance against their next paycheck. Every transaction verifiable on Solscan.</p>
       <div class="btn-row">
         <button class="btn-primary" onclick="connectWallet()">Connect Wallet to Start</button>
+        <button class="btn-secondary" onclick="loadDemoMode()">View Demo Dashboard</button>
         <a href="https://twitter.com/wclawonsolana" target="_blank" class="btn-secondary">Follow Build</a>
       </div>
     </div>
@@ -173,6 +174,7 @@
       <div class="panel-header">
         <h3>🎬 Demo Flow</h3>
         <div class="panel-actions">
+          <button class="icon-btn" onclick="loadDemoMode()">Load Demo</button>
           <button class="icon-btn" onclick="renderDemoFlow();toast('Demo flow refreshed')">↻ Refresh</button>
         </div>
       </div>
@@ -936,6 +938,63 @@ async function connectWallet(){
   const p=window.phantom?.solana||window.solana;
   if(!p?.isPhantom){toast('Install Phantom at phantom.com',1);window.open('https://phantom.com','_blank');return}
   try{const r=await p.connect();pk=r.publicKey.toString();onConn()}catch(e){if(e.code!==4001)toast('Connect failed',1)}
+}
+
+function getDemoAddresses(){
+  let saved=null;
+  try{saved=JSON.parse(localStorage.getItem('pc_demo_addresses')||'null');}catch(e){}
+  if(saved&&saved.treasury&&saved.contributors&&saved.contributors.length>=3)return saved;
+  const make=()=>solanaWeb3.Keypair.generate().publicKey.toString();
+  saved={treasury:make(),contributors:[make(),make(),make()],streams:[make(),make()]};
+  localStorage.setItem('pc_demo_addresses',JSON.stringify(saved));
+  return saved;
+}
+
+function loadDemoMode(){
+  if(typeof solanaWeb3==='undefined'){toast('Solana library still loading — try again in a second',1);return;}
+  const a=getDemoAddresses();
+  const now=Date.now();
+  const oneDay=86400000;
+  const demo={
+    id:'demo_frontier',
+    name:'Frontier Demo Team',
+    treasury:a.treasury,
+    demo:true,
+    contribs:[
+      {n:'Maya',w:a.contributors[0],role:'Solana engineer',r:1200,p:'week',schedule:'weekly',nextDue:dateInputValue(1)},
+      {n:'Rex',w:a.contributors[1],role:'Community lead',r:850,p:'week',schedule:'weekly',nextDue:dateInputValue(3)},
+      {n:'Juno',w:a.contributors[2],role:'Design + content',r:1800,p:'biweek',schedule:'biweekly',nextDue:dateInputValue(7)}
+    ],
+    streams:[
+      {name:'Meteora fees',wallet:a.streams[0],route:'payroll',percent:65,lastBalance:{usdc:418.25,sol:.84,ts:now-2*oneDay}},
+      {name:'Raydium rewards',wallet:a.streams[1],route:'advance_pool',percent:35,lastBalance:{usdc:126.4,sol:.19,ts:now-oneDay}}
+    ],
+    advances:[
+      {id:'demo_adv_maya',name:'Maya',wallet:a.contributors[0],principal:300,outstanding:150,status:'open',issuedAt:now-6*oneDay,dueAt:now+oneDay,note:'Sample 7-day paycheck advance',issueSig:'manual_demo_advance_maya',repayments:[{amount:150,ts:now-2*oneDay,note:'Sample payroll deduction',source:'demo',sig:null}]},
+      {id:'demo_adv_rex',name:'Rex',wallet:a.contributors[1],principal:200,outstanding:0,status:'closed',issuedAt:now-12*oneDay,dueAt:now-5*oneDay,note:'Sample completed advance',issueSig:'manual_demo_advance_rex',repayments:[{amount:200,ts:now-5*oneDay,note:'Sample full deduction',source:'demo',sig:null}]}
+    ],
+    payments:[
+      {amount:1050,name:'Maya',wallet:a.contributors[0],note:'Sample payroll after 150 USDC advance deduction',sig:'manual_demo_pay_maya',ts:now-2*oneDay},
+      {amount:850,name:'Rex',wallet:a.contributors[1],note:'Sample weekly payroll',sig:'manual_demo_pay_rex',ts:now-5*oneDay},
+      {amount:1800,name:'Juno',wallet:a.contributors[2],note:'Sample biweekly payroll',sig:'manual_demo_pay_juno',ts:now-9*oneDay}
+    ]
+  };
+  const existing=teams.findIndex(t=>t.id===demo.id);
+  if(existing>=0)teams[existing]=demo;else teams.unshift(demo);
+  activeTeamId=demo.id;
+  pk=a.treasury;
+  saveTeams();
+  const short=pk.slice(0,4)+'...'+pk.slice(-4);
+  const b=document.getElementById('connectBtn');
+  b.textContent='Demo '+short;b.classList.add('connected');
+  document.getElementById('walletAddress').textContent=pk+'  · sample data mode';
+  document.getElementById('heroSection').style.display='none';
+  document.getElementById('dashboard').classList.add('visible');
+  document.getElementById('teamSwitcher').style.display='flex';
+  document.getElementById('usdcBalance').textContent='Sample';
+  document.getElementById('solBalance').textContent='Sample';
+  renderAll();
+  toast('Demo dashboard loaded — sample data only, connect Phantom for real transactions');
 }
 
 function onConn(){
