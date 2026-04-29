@@ -216,7 +216,21 @@
 
     <div class="panel">
       <div class="panel-header">
-        <h3>💳 Yield Advances</h3>
+        <h3>👤 Contributor Portal Preview</h3>
+        <div class="panel-actions">
+          <button class="icon-btn" onclick="copyPortalSummary()">Copy Summary</button>
+          <button class="icon-btn" onclick="renderContributorPortal();toast('Portal refreshed')">↻ Refresh</button>
+        </div>
+      </div>
+      <div style="font-size:13px;color:#6b7280;margin-bottom:16px;line-height:1.5">
+        Judge-friendly worker view: what a contributor would see after connecting their wallet — next paycheck, open advance, deduction status, and receipt links. This makes Paycheck feel like a product for the worker, not just an employer dashboard.
+      </div>
+      <div id="portalPreview"><div class="empty-state">Add a contributor to preview the worker-facing portal.</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h3>💳 Paycheck Advances</h3>
         <div class="panel-actions">
           <button class="icon-btn" onclick="renderAdvances();toast('Advances refreshed')">↻ Refresh</button>
         </div>
@@ -676,6 +690,111 @@ function renderAdvanceSummary(){
   document.getElementById('advanceCount').textContent=open.length;
 }
 
+function getContributorPayments(wallet,name){
+  const team=getActiveTeam();
+  return (team.payments||[])
+    .filter(x=>(x.wallet&&x.wallet===wallet)||(!x.wallet&&x.name===name))
+    .sort((a,b)=>(b.ts||0)-(a.ts||0));
+}
+
+function buildPortalSummary(c){
+  const gross=getContributorGross(c);
+  const outstanding=getOutstandingAdvance(c.w);
+  const net=round2(Math.max(0,gross-outstanding));
+  const open=getOpenAdvances(c.w);
+  const payments=getContributorPayments(c.w,c.n);
+  const last=payments.find(p=>!(p.sig&&String(p.sig).startsWith('manual_')));
+  return {
+    gross,outstanding,net,open,payments,last,
+    nextDue:c.schedule&&c.schedule!=='none'?formatDueLabel(c.nextDue):'No recurring schedule set'
+  };
+}
+
+function renderContributorPortal(){
+  const team=getActiveTeam();
+  const box=document.getElementById('portalPreview');
+  if(!box)return;
+  if(!team.contribs.length){box.innerHTML='<div class="empty-state">Add a contributor to preview the worker-facing portal.</div>';return;}
+  const selectedWallet=localStorage.getItem('pc_portal_wallet_'+team.id);
+  let c=team.contribs.find(x=>x.w===selectedWallet)||team.contribs[0];
+  const i=team.contribs.findIndex(x=>x.w===c.w);
+  const portal=buildPortalSummary(c);
+  const dueColor=portal.nextDue.includes('overdue')?'#fca5a5':portal.nextDue.includes('today')||portal.nextDue.includes('tomorrow')?'#fcd34d':'#9ca3af';
+  const receipts=portal.payments.slice(0,4).map(p=>{
+    const manual=p.sig&&String(p.sig).startsWith('manual_');
+    const sig=String(p.sig||'');
+    return `<div class="activity-item" style="padding:10px 0">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center">
+        <div>
+          <div><span style="color:#6ee7b7;font-weight:600">${Number(p.amount||0).toFixed(2)} USDC</span> <span style="color:#d1d5db">${p.note||'Payment'}</span></div>
+          <div style="font-size:11px;color:#4b5563;margin-top:3px">${new Date(p.ts||Date.now()).toLocaleString()}</div>
+        </div>
+        ${manual?'<span style="color:#6b7280;font-size:11px">ledger entry</span>':`<a href="https://solscan.io/tx/${sig}" target="_blank" style="color:#34d399;font-size:11px;font-family:monospace;text-decoration:none">receipt ↗</a>`}
+      </div>
+    </div>`;
+  }).join('')||'<div class="empty-state" style="padding:14px">No receipts yet for this contributor.</div>';
+  const openRows=portal.open.map(a=>`<div style="display:flex;justify-content:space-between;gap:12px;border-top:1px solid #111;padding:10px 0">
+    <div>
+      <div style="font-size:12px;color:#d1d5db">${Number(a.principal||0).toFixed(2)} USDC advance</div>
+      <div style="font-size:11px;color:#6b7280;margin-top:3px">Due ${new Date(a.dueAt||Date.now()).toLocaleDateString()} • ${a.note||'Paycheck advance'}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:13px;color:#fcd34d;font-weight:700">${Number(a.outstanding||0).toFixed(2)} USDC</div>
+      ${a.issueSig?`<a href="https://solscan.io/tx/${a.issueSig}" target="_blank" style="font-size:11px;color:#34d399;text-decoration:none">advance tx ↗</a>`:''}
+    </div>
+  </div>`).join('')||'<div style="font-size:12px;color:#6b7280;border-top:1px solid #111;padding-top:10px">No open advance. Contributor is clear.</div>';
+  box.innerHTML=`
+    <div style="display:grid;grid-template-columns:minmax(220px,.9fr) 1.1fr;gap:16px">
+      <div style="background:#050505;border:1px solid #1f2937;border-radius:14px;padding:18px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <div class="contrib-avatar" style="width:44px;height:44px;font-size:17px">${(c.n||'?').charAt(0).toUpperCase()}</div>
+          <div>
+            <div style="font-size:18px;font-weight:700;color:#fff">${c.n}</div>
+            <div style="font-size:11px;color:#6b7280;font-family:monospace;margin-top:2px">${c.w.slice(0,8)}...${c.w.slice(-6)}</div>
+            ${c.role?`<div style="font-size:11px;color:#9ca3af;margin-top:3px">${c.role}</div>`:''}
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="card" style="padding:14px;background:#0a0a0a"><div class="card-label">Next Gross</div><div style="font-size:20px;font-weight:700">${portal.gross.toFixed(2)}</div><div class="card-sub">USDC</div></div>
+          <div class="card" style="padding:14px;background:#0a0a0a"><div class="card-label">Net If Paid Now</div><div style="font-size:20px;font-weight:700;color:#6ee7b7">${portal.net.toFixed(2)}</div><div class="card-sub">after deductions</div></div>
+        </div>
+        <div style="font-size:12px;color:${dueColor};margin-bottom:12px">⏰ ${portal.nextDue}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="pay-btn" onclick="openPay(${i})">Pay contributor</button>
+          <button class="edit-btn" onclick="openAdvance(${i})">Issue advance</button>
+          ${portal.outstanding>0?`<button class="edit-btn" onclick="openRepaymentForWallet('${c.w}')">Deduct</button>`:''}
+        </div>
+      </div>
+      <div style="background:#050505;border:1px solid #1f2937;border-radius:14px;padding:18px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-weight:700;color:#fff">Worker statement</div>
+          <select onchange="localStorage.setItem('pc_portal_wallet_${team.id}',this.value);renderContributorPortal()" style="background:#111;border:1px solid #1f2937;color:#fff;padding:7px 10px;border-radius:8px;font-size:12px">
+            ${team.contribs.map(x=>`<option value="${x.w}" ${x.w===c.w?'selected':''}>${x.n}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+          <div><div class="card-label">Open advance</div><div style="font-size:18px;font-weight:700;color:${portal.outstanding>0?'#fcd34d':'#6ee7b7'}">${portal.outstanding.toFixed(2)}</div></div>
+          <div><div class="card-label">Receipts</div><div style="font-size:18px;font-weight:700">${portal.payments.filter(p=>!(p.sig&&String(p.sig).startsWith('manual_'))).length}</div></div>
+          <div><div class="card-label">Status</div><div style="font-size:18px;font-weight:700;color:${portal.outstanding>0?'#fcd34d':'#6ee7b7'}">${portal.outstanding>0?'Open':'Clear'}</div></div>
+        </div>
+        <div style="font-size:12px;color:#9ca3af;margin-bottom:8px">Advances</div>
+        ${openRows}
+        <div style="font-size:12px;color:#9ca3af;margin:14px 0 8px">Recent receipts</div>
+        ${receipts}
+      </div>
+    </div>`;
+}
+
+function copyPortalSummary(){
+  const team=getActiveTeam();
+  if(!team.contribs.length){toast('No contributor to summarize',1);return;}
+  const selectedWallet=localStorage.getItem('pc_portal_wallet_'+team.id);
+  const c=team.contribs.find(x=>x.w===selectedWallet)||team.contribs[0];
+  const portal=buildPortalSummary(c);
+  const text=`Paycheck worker statement — ${c.n}\nWallet: ${c.w}\nNext gross: ${portal.gross.toFixed(2)} USDC\nOpen advance: ${portal.outstanding.toFixed(2)} USDC\nNet if paid now: ${portal.net.toFixed(2)} USDC\nNext due: ${portal.nextDue}\nReceipts: ${portal.payments.filter(p=>!(p.sig&&String(p.sig).startsWith('manual_'))).length}`;
+  navigator.clipboard?.writeText(text).then(()=>toast('Portal summary copied')).catch(()=>toast(text));
+}
+
 function renderDemoFlow(){
   const team=getActiveTeam();
   const open=(team.advances||[]).filter(a=>a.status==='open'&&Number(a.outstanding||0)>0);
@@ -793,9 +912,9 @@ function applyRepayment(){
   const note=(document.getElementById('r_note').value||'Advance repayment').trim();
   applyAdvanceRepaymentByWallet(advance.wallet,applied,{note,source:'manual'});
   const team=getActiveTeam();
-  team.payments.unshift({amount:applied,name:advance.name,note:'Advance repayment: '+note,sig:'manual_'+Date.now(),ts:Date.now()});
+  team.payments.unshift({amount:applied,name:advance.name,wallet:advance.wallet,note:'Advance repayment: '+note,sig:'manual_'+Date.now(),ts:Date.now()});
   saveTeams();
-  renderC();renderPayments();renderAdvanceSummary();renderAdvances();renderSchedules();renderDemoFlow();
+  renderC();renderPayments();renderAdvanceSummary();renderAdvances();renderSchedules();renderDemoFlow();renderContributorPortal();
   closeModal('repaymentModal');
   toast(Number(advance.outstanding||0)>0?'Repayment applied':'Advance fully repaid');
 }
@@ -860,7 +979,7 @@ function renderAll(){
   const team=getActiveTeam();
   document.getElementById('teamName').textContent=team.name;
   document.getElementById('teamTitle').textContent=team.name+' — Members';
-  renderC();renderPayments();updateAnalytics();renderStreams();renderAdvanceSummary();renderAdvances();renderSchedules();renderDemoFlow();
+  renderC();renderPayments();updateAnalytics();renderStreams();renderAdvanceSummary();renderAdvances();renderSchedules();renderDemoFlow();renderContributorPortal();
 }
 
 // ========== Revenue Streams (Mode 3) ==========
@@ -1620,7 +1739,7 @@ async function runBatchPay(){
         if(deduction>0){
           progress.innerHTML+=`<br>&nbsp;&nbsp;<span style="color:#fcd34d">Applied ${deduction.toFixed(2)} USDC advance deduction</span>`;
         }
-        renderPayments();updateAnalytics();renderAdvanceSummary();renderAdvances();renderC();renderSchedules();renderDemoFlow();
+        renderPayments();updateAnalytics();renderAdvanceSummary();renderAdvances();renderC();renderSchedules();renderDemoFlow();renderContributorPortal();
         // Small delay between tx to let Phantom reset state
         if(idx<toPay.length-1){
           progress.innerHTML+=`<br>&nbsp;&nbsp;<span style="color:#6b7280">Preparing next payment...</span>`;
@@ -1705,7 +1824,7 @@ async function sendOneUSDC(recipient,name,amount,note,opts={}){
 
   const team=getActiveTeam();
   if(!opts.skipPaymentLog){
-    team.payments.unshift({amount,name,note,sig:signature,ts:Date.now()});
+    team.payments.unshift({amount,name,wallet:recipient,note,sig:signature,ts:Date.now()});
     saveTeams();
   }
   return signature;
@@ -1972,7 +2091,7 @@ async function sendUSDC(){
     btn.textContent='Sent!';
 
     const team=getActiveTeam();
-    team.payments.unshift({amount,name,note,sig:signature,ts:Date.now()});
+    team.payments.unshift({amount,name,wallet:recipient,note,sig:signature,ts:Date.now()});
     const scheduledContributor=team.contribs.find(x=>x.w===recipient);
     if(autoDeduct){
       const c=scheduledContributor;
