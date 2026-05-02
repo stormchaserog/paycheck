@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Paycheck by WCLAW</title>
   <meta name="description" content="Pay Solana contributors in USDC and issue paycheck advances before payday. Simple crypto payroll built on Solana.">
-  <link rel="canonical" href="https://paycheck.whiteclaw.dev/">
+  <link rel="canonical" href="https://paycheck.wclaw.dev/">
   <meta property="og:title" content="Paycheck by WCLAW">
   <meta property="og:description" content="Pay Solana contributors in USDC and issue paycheck advances before payday. Simple crypto payroll built on Solana.">
-  <meta property="og:url" content="https://paycheck.whiteclaw.dev/">
-  <meta property="og:site_name" content="White Claw">
+  <meta property="og:url" content="https://paycheck.wclaw.dev/">
+  <meta property="og:site_name" content="WCLAW">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@wclawonsolana">
   <meta name="twitter:creator" content="@wclawonsolana">
@@ -1386,7 +1386,7 @@ function exportTeamData(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
-  a.download='paycheck-whiteclaw-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  a.download='paycheck-wclaw-backup-'+new Date().toISOString().slice(0,10)+'.json';
   a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
   toast('Team data exported');

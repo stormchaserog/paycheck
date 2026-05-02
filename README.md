@@ -2,8 +2,8 @@
 
 **Stablecoin payroll with yield-powered advances for crypto-native teams.**
 
-🔗 Live: **https://paycheck.whiteclaw.dev**
-🏢 Company: **https://whiteclaw.dev**
+🔗 Live: **https://paycheck.wclaw.dev**
+🏢 Company: **https://WCLAW.dev**
 🐦 Follow: [@wclawonsolana](https://twitter.com/wclawonsolana)
 💎 Token: **$WCLAW** on Solana
 🏆 Built for [Colosseum Frontier 2026](https://colosseum.com/frontier)
